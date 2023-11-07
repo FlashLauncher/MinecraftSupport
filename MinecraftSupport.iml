@@ -11,5 +11,6 @@
     <orderEntry type="module" module-name="FlashLauncher" scope="PROVIDED" />
     <orderEntry type="module" module-name="AdvancedAPICore" scope="PROVIDED" />
     <orderEntry type="module" module-name="JavaSupport" scope="PROVIDED" />
+    <orderEntry type="module" module-name="FlashLauncher" />
   </component>
 </module>
