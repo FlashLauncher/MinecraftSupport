@@ -15,7 +15,6 @@ import Utils.web.WebResponse;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.net.URI;
 import java.nio.file.Files;
 import java.util.Arrays;
@@ -23,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -173,9 +171,10 @@ public class MCMetaVersion implements IMinecraftVersion {
     @Override
     public LaunchListener init(final RunProc configuration) {
         return new LaunchListener() {
+            LaunchListener parent = null;
             JsonDict dict = null;
-            File gameDir = null, homeDir = configuration.workDir;
-            final ListMap<String, String> vars = new ListMap<>();
+            File gameDir, homeDir = configuration.workDir;
+            final ListMap<String, String> vars;
 
             @Override
             public void preLaunch() {
@@ -184,7 +183,6 @@ public class MCMetaVersion implements IMinecraftVersion {
                 } catch (final Exception ex) {
                     ex.printStackTrace();
                 }
-
                 if (dict == null)
                     return;
 
@@ -200,6 +198,25 @@ public class MCMetaVersion implements IMinecraftVersion {
                     g = new TaskGroupAutoProgress(1);
                     add = true;
                 }
+
+                final JsonElement inheritsFrom = dict.get("inheritsFrom");
+                if (inheritsFrom != null && inheritsFrom.isString())
+                    try {
+                        final IMinecraftVersion ver = plugin.getVersion(inheritsFrom.getAsString());
+                        if (ver == null)
+                            System.err.println("I can't find " + inheritsFrom.getAsString());
+                        else
+                            parent = ver.init(configuration);
+                    } catch (final Exception ex) {
+                        ex.printStackTrace();
+                    }
+
+                if (parent != null)
+                    try {
+                        parent.preLaunch();
+                    } catch (final Exception ex) {
+                        ex.printStackTrace();
+                    }
 
                 vars.put("launcher_name", FlashLauncher.NAME);
                 vars.put("launcher_version", FlashLauncher.VERSION.toString());
@@ -217,13 +234,19 @@ public class MCMetaVersion implements IMinecraftVersion {
                 final boolean hw1 = plugin.checkHashWeb.get(), hw2 = !hw1, hfs = plugin.checkHashFS.get();
 
                 final char s = Core.IS_WINDOWS ? ';' : ':';
-                final StringBuilder classpath = new StringBuilder();
+
+                final StringBuilder classpath;
+                {
+                    final String e = vars.get("classpath");
+                    classpath = e == null ? new StringBuilder() : new StringBuilder(e);
+                }
 
                 if (dict.has("libraries")) {
                     final File libs = new File(gameDir, "libraries"), nd = new File(vd, "natives");
                     if (!nd.exists())
                         nd.mkdirs();
-                    vars.put("natives_directory", nd.getAbsolutePath());
+                    vars.put("natives_directory", vars.containsKey("natives_directory") ?
+                            vars.get("natives_directory") + s + nd.getAbsolutePath() : nd.getAbsolutePath());
                     final TaskGroupAutoProgress sg = new TaskGroupAutoProgress(1);
                     for (final JsonElement e : dict.getAsList("libraries")) {
                         final JsonDict d = e.getAsDict();
@@ -236,7 +259,8 @@ public class MCMetaVersion implements IMinecraftVersion {
                                 final JsonDict a = dl.getAsDict("artifact");
                                 final String p = a.has("path") ? a.getAsString("path") : getPathByName(n);
                                 classpath.append(new File(libs, p).getAbsolutePath()).append(s);
-                                if (a.has("url"))
+                                final JsonElement u = a.get("url");
+                                if (u != null && u.isString() && !u.getAsString().isEmpty())
                                     sg.addTask(new LibraryTask(sg, libs, p,
                                             hw1 && a.has("sha1") ? a.getAsString("sha1") : null, URI.create(a.getAsString("url")), null, null));
                             }
@@ -268,7 +292,7 @@ public class MCMetaVersion implements IMinecraftVersion {
                             final URI uri = URI.create(cd.getAsString("url"));
                             final String sha1 = cd.getAsString("sha1");
                             final File f = new File(vd, id + ".jar");
-                            classpath.append(f.toPath());
+                            configuration.generalObjects.put("clientJar", f.toPath());
                             g.addTask(new Task() {
                                 @Override
                                 public void run() throws Throwable {
@@ -345,6 +369,8 @@ public class MCMetaVersion implements IMinecraftVersion {
 
             @Override
             public void launch() {
+                if (parent != null)
+                    parent.launch();
                 JsonDict args = null;
                 if (dict.has("arguments"))
                     try {
@@ -362,14 +388,20 @@ public class MCMetaVersion implements IMinecraftVersion {
                     }
                 else {
                     final ConcurrentLinkedQueue<String> l = configuration.beginArgs;
+                    final String p = l.peek();
+                    l.clear();
+                    if (p != null)
+                        l.add(p);
                     l.add("-Djava.library.path=" + vars.get("natives_directory"));
                     l.add("-cp");
-                    l.add(vars.get("classpath"));
+                    l.add(vars.get("classpath") + configuration.generalObjects.get("clientJar"));
                 }
 
                 try {
-                    if (dict.has("mainClass"))
+                    if (dict.has("mainClass")) {
+                        configuration.args.clear();
                         configuration.args.add(dict.getAsString("mainClass"));
+                    }
                 } catch (final Exception ex) {
                     ex.printStackTrace();
                 }
@@ -383,6 +415,7 @@ public class MCMetaVersion implements IMinecraftVersion {
                     }
                 else if (dict.has("minecraftArguments"))
                     try {
+                        configuration.endArgs.clear();
                         for (final String a : dict.getAsString("minecraftArguments").split(" ")) {
                             if (a.isEmpty())
                                 continue;
@@ -426,7 +459,11 @@ public class MCMetaVersion implements IMinecraftVersion {
 
             {
                 gameDir = (File) configuration.generalObjects.get("gameDir");
-                configuration.generalObjects.put("variables", vars);
+                final Object vm = configuration.generalObjects.get("variables");
+                if (vm == null)
+                    configuration.generalObjects.put("variables", vars = new ListMap<>());
+                else
+                    vars = (ListMap<String, String>) vm;
             }
         };
     }
