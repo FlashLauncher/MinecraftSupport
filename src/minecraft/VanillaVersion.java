@@ -3,6 +3,7 @@ package minecraft;
 import Launcher.RunProc;
 import Launcher.Task;
 import Launcher.TaskGroupAutoProgress;
+import Launcher.base.LaunchListener;
 import Utils.Core;
 import Utils.FS;
 import Utils.json.Json;
@@ -31,46 +32,58 @@ public class VanillaVersion implements IMinecraftVersion {
         this.tags = Arrays.asList(tags);
     }
 
-    @Override public String toString() { return id; }
+    @Override public String getID() { return id; }
 
     @Override
-    public void preLaunch(final RunProc configuration, final File gameDir, final File homeDir) {
-        final WebClient wc = new WebClient();
-        wc.allowRedirect = true;
-        configuration.addTaskGroup(new TaskGroupAutoProgress() {{
-            addTask(new Task() {
-                @Override
-                public void run() throws Throwable {
-                    final File d = new File(plugin.gameDir, "versions/" + id), m = new File(d, id + ".json");
-                    if (!d.exists())
-                        d.mkdirs();
-                    if (!m.exists() || !Core.hashToHex("sha1", Files.readAllBytes(m.toPath())).equals(sha1))
-                        while (true) {
-                            final ByteArrayOutputStream os = new ByteArrayOutputStream();
-                            final WebResponse r = wc.open("GET", url, os, true);
-                            r.auto();
-                            if (r.getResponseCode() != 200)
-                                continue;
-                            final byte[] data = os.toByteArray();
-                            if (Core.hashToHex("sha1", data).equals(sha1)) {
-                                Files.write(m.toPath(), data);
-                                break;
-                            }
+    public LaunchListener init(RunProc configuration) {
+        return new LaunchListener() {
+            final LaunchListener sub;
+            final WebClient wc = new WebClient();
+            final File
+                    gameDir = (File) configuration.generalObjects.get("gameDir"),
+                    homeDir = configuration.workDir,
+                    d = new File(gameDir, "versions/" + id), m = new File(d, id + ".json");
+
+            @Override
+            public void preLaunch() {
+                configuration.addTaskGroup(new TaskGroupAutoProgress() {{
+                    addTask(new Task() {
+                        @Override
+                        public void run() throws Throwable {
+                            if (!d.exists())
+                                d.mkdirs();
+                            if (!m.exists() || !Core.hashToHex("sha1", Files.readAllBytes(m.toPath())).equals(sha1))
+                                while (true) {
+                                    final ByteArrayOutputStream os = new ByteArrayOutputStream();
+                                    final WebResponse r = wc.open("GET", url, os, true);
+                                    r.auto();
+                                    if (r.getResponseCode() != 200)
+                                        continue;
+                                    final byte[] data = os.toByteArray();
+                                    if (Core.hashToHex("sha1", data).equals(sha1)) {
+                                        Files.write(m.toPath(), data);
+                                        break;
+                                    }
+                                }
+                            sub.preLaunch();
                         }
-                    final MCMetaVersion ver = new MCMetaVersion(plugin, id, m, tags);
-                    ver.preLaunch(configuration, gameDir, homeDir);
-                }
 
-                @Override
-                public String toString() {
-                    return "Getting client ...";
-                }
-            });
-        }});
+                        @Override public String toString() { return "Getting client ..."; }
+                    });
+                }});
+            }
+
+            @Override
+            public void launch() {
+                sub.launch();
+            }
+
+            {
+                sub = new MCMetaVersion(plugin, id, m, tags).init(configuration);
+                wc.allowRedirect = true;
+            }
+        };
     }
 
-    @Override
-    public void launch(RunProc configuration, final File gameDir, final File homeDir) {
-
-    }
+    @Override public String toString() { return id; }
 }

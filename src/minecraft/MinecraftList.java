@@ -28,6 +28,13 @@ public class MinecraftList implements Iterable<IMinecraftVersion> {
         }
     }
 
+    public IMinecraftVersion get(final String id) {
+        for (final IMinecraftVersion ver : vl)
+            if (ver.getID().equals(id))
+                return ver;
+        return null;
+    }
+
     public void remove(final IMinecraftVersion ver) {
         synchronized (vl) {
             vl.remove(ver);

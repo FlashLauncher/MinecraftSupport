@@ -2,12 +2,15 @@ package minecraft;
 
 import Launcher.PluginContext;
 import Launcher.RunProc;
-import Launcher.base.IAccount;
 import Launcher.base.IEditorContext;
-import Launcher.base.IProfile;
+import Launcher.base.LaunchListener;
 import UIL.UI;
 import UIL.base.IImage;
 import UIL.base.ITextField;
+import Utils.ListMap;
+
+import java.util.List;
+import java.util.UUID;
 
 public class MCOfflineAccount implements IMinecraftAccount {
     public static final String ID = "minecraft-support";
@@ -23,13 +26,14 @@ public class MCOfflineAccount implements IMinecraftAccount {
         ICON_OFFLINE = o;
     }
 
-    final PluginContext context;
+    final MinecraftSupport plugin;
 
-    public MCOfflineAccount(final PluginContext context) {
-        this.context = context;
+    public MCOfflineAccount(final MinecraftSupport plugin) {
+        this.plugin = plugin;
     }
 
-    String name;
+    String name = null, accessToken = null;
+    UUID uuid = null;
 
     @Override
     public IImage getIcon() {
@@ -60,24 +64,25 @@ public class MCOfflineAccount implements IMinecraftAccount {
                     }
                 }).size(editor.width() - 16, 32).pos(8, 8),
                 UI.button(LANG_REMOVE).size(editor.width() - 16, 32).pos(8, 48).onAction((s, e) -> {
-                    context.removeAccount(this);
+                    plugin.getContext().removeAccount(this);
                     editor.close();
                 })
         ));
+        editor.onClose(plugin::saveConfig);
     }
 
-    @Override
-    public void preLaunch(RunProc configuration) {
-
-    }
+    @Override public String toString() { return name; }
 
     @Override
-    public void launch(RunProc configuration) {
-
-    }
-
-    @Override
-    public String toString() {
-        return name;
+    public LaunchListener init(final RunProc configuration) {
+        final ListMap<String, String> m = (ListMap<String, String>) configuration.generalObjects.get("variables");
+        m.put("user_type", "mojang");
+        m.put("auth_player_name", name);
+        m.put("uuid", uuid.toString());
+        m.put("auth_uuid", uuid.toString());
+        m.put("auth_xuid", uuid.toString());
+        m.put("auth_access_token", accessToken);
+        m.put("clientid", accessToken);
+        return null;
     }
 }

@@ -1,10 +1,10 @@
 package minecraft;
 
 import Launcher.RunProc;
-
-import java.io.File;
+import Launcher.base.LaunchListener;
 
 public interface IMinecraftVersion {
-    void preLaunch(final RunProc configuration, final File gameDir, final File homeDir) throws Exception;
-    void launch(final RunProc configuration, final File gameDir, final File homeDir) throws Exception;
+    String getID();
+
+    LaunchListener init(final RunProc configuration);
 }
