@@ -16,6 +16,7 @@ import Utils.web.WebResponse;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
@@ -211,6 +212,18 @@ public class MCMetaVersion implements IMinecraftVersion {
                         ex.printStackTrace();
                     }
 
+                final File vd = new File(gameDir, "versions/" + id), nd;
+                if (vars.containsKey("natives_directory"))
+                    nd = new File(vars.get("natives_directory"));
+                else
+                    vars.put("natives_directory", (nd = new File(vd, "natives")).getAbsolutePath());
+
+                if (!vd.exists())
+                    vd.mkdirs();
+
+                if (!nd.exists())
+                    nd.mkdirs();
+
                 if (parent != null)
                     try {
                         parent.preLaunch();
@@ -226,11 +239,6 @@ public class MCMetaVersion implements IMinecraftVersion {
 
                 vars.put("game_directory", homeDir.getPath());
 
-                final File vd = new File(gameDir, "versions/" + id);
-
-                if (!vd.exists())
-                    vd.mkdirs();
-
                 final boolean hw1 = plugin.checkHashWeb.get(), hw2 = !hw1, hfs = plugin.checkHashFS.get();
 
                 final char s = Core.IS_WINDOWS ? ';' : ':';
@@ -242,19 +250,16 @@ public class MCMetaVersion implements IMinecraftVersion {
                 }
 
                 if (dict.has("libraries")) {
-                    final File libs = new File(gameDir, "libraries"), nd = new File(vd, "natives");
-                    if (!nd.exists())
-                        nd.mkdirs();
-                    vars.put("natives_directory", vars.containsKey("natives_directory") ?
-                            vars.get("natives_directory") + s + nd.getAbsolutePath() : nd.getAbsolutePath());
+                    final File libs = new File(gameDir, "libraries");
                     final TaskGroupAutoProgress sg = new TaskGroupAutoProgress(1);
                     for (final JsonElement e : dict.getAsList("libraries")) {
                         final JsonDict d = e.getAsDict();
                         String n = d.getAsString("name");
                         if (!isAllow(d))
                             continue;
-                        if (d.has("downloads")) {
-                            final JsonDict dl = d.getAsDict("downloads");
+                        JsonElement te = d.get("downloads");
+                        if (te != null && te.isDict()) {
+                            final JsonDict dl = te.getAsDict();
                             if (dl.has("artifact")) {
                                 final JsonDict a = dl.getAsDict("artifact");
                                 final String p = a.has("path") ? a.getAsString("path") : getPathByName(n);
@@ -279,7 +284,50 @@ public class MCMetaVersion implements IMinecraftVersion {
                                 } catch (final Exception ex) {
                                     ex.printStackTrace();
                                 }
-                        }
+                        } else if ((te = d.get("url")) != null && te.isString())
+                            try {
+                                final String p = getPathByName(n);
+                                classpath.append(new File(libs, p).getAbsolutePath()).append(s);
+                                final String u = (te.getAsString().endsWith("/") ? te.getAsString() : te.getAsString() + '/') + p;
+                                sg.addTask(new Task() {
+                                    final File file = new File(libs, p);
+
+                                    @Override
+                                    public void run() throws Throwable {
+                                        try {
+                                            if (!file.exists()) {
+                                                while (true) {
+                                                    ByteArrayOutputStream os = new ByteArrayOutputStream();
+                                                    final String sha1;
+                                                    if (hw1) {
+                                                        client.open("GET", URI.create(u + ".sha1"), os, true).auto();
+                                                        sha1 = os.toString();
+                                                        os = new ByteArrayOutputStream();
+                                                    } else
+                                                        sha1 = null;
+                                                    client.open("GET", URI.create(u), os, true).auto();
+                                                    final byte[] data = os.toByteArray();
+                                                    if (!hw1 || Core.hashToHex("sha1", data).equals(sha1)) {
+                                                        if (!file.getParentFile().exists())
+                                                            file.getParentFile().mkdirs();
+                                                        Files.write(file.toPath(), data);
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        } catch (final Exception ex) {
+                                            ex.printStackTrace();
+                                        }
+                                    }
+
+                                    @Override
+                                    public String toString() {
+                                        return "Downloading lib ... (" + sg.getProgress() + "/" + sg.getMaxProgress() + ") - " + n;
+                                    }
+                                });
+                            } catch (final Exception ex) {
+                                ex.printStackTrace();
+                            }
                     }
                     configuration.addTaskGroup(sg);
                 }
@@ -381,8 +429,13 @@ public class MCMetaVersion implements IMinecraftVersion {
 
                 if (args != null)
                     try {
-                        if (args.has("jvm"))
+                        if (args.has("jvm")) {
+                            if (vars.containsKey("classpath") && configuration.generalObjects.containsKey("clientJar")) {
+                                vars.put("classpath", vars.get("classpath") + configuration.generalObjects.get("clientJar"));
+                                configuration.generalObjects.remove("clientJar");
+                            }
                             parse(args.getAsList("jvm"), configuration.beginArgs);
+                        }
                     } catch (final Exception ex) {
                         ex.printStackTrace();
                     }
