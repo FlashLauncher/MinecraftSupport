@@ -50,6 +50,13 @@ public class MinecraftList implements IMinecraftVersion, Iterable<IMinecraftVers
         for (final IMinecraftVersion ver : vl)
             if (ver.getID().equals(id))
                 return ver;
+        for (final IMinecraftVersion ver : vl)
+            if (ver instanceof MinecraftList) {
+                final IMinecraftVersion v = ((MinecraftList) ver).get(id);
+                if (v == null)
+                    continue;
+                return v;
+            }
         return null;
     }
 
