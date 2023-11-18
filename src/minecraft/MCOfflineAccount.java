@@ -76,7 +76,12 @@ public class MCOfflineAccount implements IMinecraftAccount {
     @Override
     public LaunchListener init(final RunProc configuration) {
         final ListMap<String, String> m = (ListMap<String, String>) configuration.generalObjects.get("variables");
+        if (m == null) {
+            System.out.println("No variables map!");
+            return null;
+        }
         m.put("user_type", "mojang");
+        m.put("user_properties", "{}");
         m.put("auth_player_name", name);
         m.put("uuid", uuid.toString());
         m.put("auth_uuid", uuid.toString());
