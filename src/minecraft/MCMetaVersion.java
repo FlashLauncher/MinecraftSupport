@@ -16,7 +16,6 @@ import Utils.web.WebResponse;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.net.URI;
-import java.net.URL;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
@@ -31,6 +30,7 @@ public class MCMetaVersion implements IMinecraftVersion {
     public final List<String> tags;
     private final JsonDict dict;
     public final File meta;
+
     public final MinecraftSupport plugin;
 
     private final WebClient client = new WebClient();
