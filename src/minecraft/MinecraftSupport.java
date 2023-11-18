@@ -303,18 +303,5 @@ public class MinecraftSupport extends Plugin {
     public void addList(final MinecraftList... lists) { lv.addAll(Arrays.asList(lists)); }
     public void removeList(final Collection<? extends IMinecraftVersion> lists) { lv.removeAll(lists); }
     public void removeList(final IMinecraftVersion... lists) { lv.removeAll(Arrays.asList(lists)); }
-
-    public static IMinecraftVersion findVersion(final MinecraftList list, final String id) {
-        for (final IMinecraftVersion version : list)
-            if (version instanceof MinecraftList) {
-                final IMinecraftVersion v = findVersion((MinecraftList) version, id);
-                if (v == null)
-                    continue;
-                return v;
-            } else if (version.getID().equals(id))
-                return version;
-        return null;
-    }
-
-    public IMinecraftVersion getVersion(final String id) { return findVersion(lv, id); }
+    public IMinecraftVersion getVersion(final String id) { return lv.get(id); }
 }
