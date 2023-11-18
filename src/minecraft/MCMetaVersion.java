@@ -275,7 +275,16 @@ public class MCMetaVersion implements IMinecraftVersion {
                                     nm = nm.getAsDict().get(osn);
                                     if (nm == null || !nm.isString())
                                         continue;
-                                    final JsonDict a = dl.getAsDict("classifiers").getAsDict(nm.getAsString());
+                                    String v = nm.getAsString();
+                                    if (v.contains("${arch}")) {
+                                        final String arch = System.getProperty("os.arch");
+                                        final boolean is64 = arch.equals("amd64"), is32 = arch.equals("x86");
+                                        v = v.replaceAll("\\$\\{arch}", is64 ? "64" : is32 ? "32" : "");
+                                    }
+                                    final JsonElement e2 = dl.getAsDict("classifiers").get(v);
+                                    if (e2 == null || !e2.isDict())
+                                        continue;
+                                    final JsonDict a = e2.getAsDict();
                                     final String p = a.has("path") ? a.getAsString("path") : getPathByName(n);
                                     classpath.append(new File(libs, p).getAbsolutePath()).append(s);
                                     if (a.has("url"))
