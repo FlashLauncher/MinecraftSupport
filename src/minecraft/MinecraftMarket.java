@@ -16,6 +16,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MinecraftMarket extends Market {
@@ -67,7 +68,8 @@ public class MinecraftMarket extends Market {
                             continue;
                         }
                         final String type = i.getAsStringOrDefault("type", "");
-                        final VanillaVersion ver = new VanillaVersion(plugin, i.getAsString("id"), url, i.getAsString("sha1"), type);
+                        final WebVersion ver = new WebVersion(plugin, client, i.getAsString("id"), i.getAsString("sha1"), url,
+                                type.isEmpty() ? null : Arrays.asList(type));
                         all.add(ver);
                         versions.add(ver);
                         if (type.isEmpty())
