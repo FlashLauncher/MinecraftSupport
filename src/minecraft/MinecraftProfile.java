@@ -72,59 +72,60 @@ public class MinecraftProfile implements IMinecraftProfile {
                 UI.text("Game version:").size(cw2, 18).pos(cw2 + 16, 74),
                 UI.comboBox().text(version).size(cw2, 32).pos(cw2 + 16, 100).imageOffset(4).onList(le -> {
                     final IContainer container = le.getContainer().size(context.width(), context.height());
-                    final ArrayList<MinecraftList> lv = plugin.lv;
+                    final MinecraftList lv = plugin.lv;
 
                     new Object() {
-                        final IButton
-                                b1 = UI.button("<").size(32, 32).pos(8, 8).onAction((s, e) -> le.close()),
-                                b2 = UI.button("<").size(32, 32).pos(8, 8).onAction((s, e) -> main())
-                        ;
-
-                        final ContainerListBuilder
-                                clb1 = new ContainerListBuilder(UI.scrollPane().content(UI.panel().borderRadius(UI.ZERO)), 150, 8).size(context.width(), context.height() - 48).pos(0, 48),
-                                clb2 = new ContainerListBuilder(UI.scrollPane().content(UI.panel().borderRadius(UI.ZERO)), 150, 8).size(context.width(), context.height() - 48).pos(0, 48)
-                        ;
+                        final ContainerListBuilder clb = new ContainerListBuilder(UI.scrollPane().content(UI.panel().borderRadius(UI.ZERO)), 150, 8)
+                                .size(context.width(), context.height() - 48).pos(0, 48);
 
                         Runnable r = null;
 
-                        void list(final MinecraftList l) {
+                        void list(final MinecraftList list, final IButton back) {
                             UI.run(() -> {
-                                container.clear().add(b2, clb2.focus());
-                                clb1.clear();
-                                clb2.update();
-                            });
-                            Core.offNotifyLoop(r);
-                            r = Core.onNotifyLoop(l, () -> {
-                                clb2.clear();
-                                for (final IMinecraftVersion ver : l) {
-                                    clb2.add(UI.button(ver, null).onAction((s, e) -> {
-                                        le.getSelf().text(ver).focus();
-                                        version = ver.getID();
+                                final Runnable old = r;
+                                final IButton b = UI.button("<").size(32, 32).pos(8, 8).onAction((s, e) -> {
+                                    if (back == null) {
                                         le.close();
-                                    }));
-                                }
-                                clb2.update();
-                            });
-                        }
-
-                        void main() {
-                            container.focus().clear().add(b1.update(), clb1);
-                            Core.offNotifyLoop(r);
-                            clb2.clear();
-                            r = Core.onNotifyLoop(lv, () -> {
-                                clb1.clear();
-                                for (final MinecraftList l : lv)
-                                    clb1.add(UI.button(l, l.icon).imageAlign(ImgAlign.TOP).imageOffset(20).onAction((s, e) -> list(l)));
-                                clb1.update();
+                                        return;
+                                    }
+                                    back.update();
+                                    Core.offNotifyLoop(r);
+                                    UI.run(() -> {
+                                        clb.focus();
+                                        container.remove(s).add(back);
+                                        r = Core.onNotifyLoop(list, old);
+                                    });
+                                });
+                                container.add(b);
+                                b.update().focus();
+                                if (back != null)
+                                    container.remove(back);
+                                Core.offNotifyLoop(r);
+                                r = Core.onNotifyLoop(list, () -> {
+                                    clb.focus().clear();
+                                    for (final IMinecraftVersion ver : list) {
+                                        if (ver instanceof MinecraftList) {
+                                            final MinecraftList l = (MinecraftList) ver;
+                                            clb.add(UI.button().text(l).image(l.icon).imageAlign(ImgAlign.TOP).imageOffset(20).smooth(l.smooth).onAction((s, e) -> list(l, b)));
+                                            continue;
+                                        }
+                                        clb.add(UI.button().text(ver).onAction((s, e) -> {
+                                            version = ver.getID();
+                                            le.close();
+                                        }));
+                                    }
+                                    clb.update();
+                                });
                             });
                         }
 
                         {
-                            le.getSelf().onCloseList(event -> {
+                            container.add(clb);
+                            le.getSelf().onCloseList(e -> {
                                 Core.offNotifyLoop(r);
                                 return true;
                             });
-                            main();
+                            list(lv, null);
                         }
                     };
 
