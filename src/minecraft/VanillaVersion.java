@@ -73,10 +73,7 @@ public class VanillaVersion implements IMinecraftVersion {
                 }});
             }
 
-            @Override
-            public void launch() {
-                sub.launch();
-            }
+            @Override public void launch() { sub.launch(); }
 
             {
                 sub = new MCMetaVersion(plugin, id, m, tags).init(configuration);
