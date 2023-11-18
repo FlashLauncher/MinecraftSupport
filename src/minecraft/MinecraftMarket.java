@@ -26,6 +26,7 @@ public class MinecraftMarket extends Market {
     public final PluginContext context;
     public final MinecraftSupport plugin;
 
+    private boolean success = false;
     private TaskGroup group = new TaskGroupAutoProgress();
     public final MinecraftList all, versions;
 
@@ -79,6 +80,7 @@ public class MinecraftMarket extends Market {
                         l.add(ver);
                     }
                     plugin.addList(types.values());
+                    success = true;
                     group = null;
                 } catch (final Throwable ex) {
                     ex.printStackTrace();
@@ -87,6 +89,8 @@ public class MinecraftMarket extends Market {
         });
         context.addTaskGroup(group);
     }
+
+    public boolean isSuccess() { return success; }
 
     public void waitFinish() throws InterruptedException {
         final TaskGroup g = group;
