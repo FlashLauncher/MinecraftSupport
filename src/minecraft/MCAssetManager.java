@@ -26,7 +26,7 @@ public class MCAssetManager extends Market {
     public final MinecraftSupport plugin;
 
     public MCAssetManager(final MinecraftSupport plugin, final IImage icon) {
-        super("minecraft-asset-manager", icon);
+        super("minecraft-support.asset-manager", icon);
         this.plugin = plugin;
         client.allowRedirect = true;
         client.headers.put("User-Agent", "FlashLauncher/MinecraftSupport/indev (mcflashlauncher@gmail.com)");
