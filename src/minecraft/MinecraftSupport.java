@@ -33,6 +33,8 @@ public class MinecraftSupport extends Plugin {
 
     public File gameDir = null, homeDir = null;
 
+    public final boolean buttonSmooth;
+
     public final JavaSupport javaSupport;
 
     public final MinecraftMarket market;
@@ -42,7 +44,7 @@ public class MinecraftSupport extends Plugin {
                 OFFLINE_ACCOUNT_MAKER = Lang.get(ID + ".maker.offline-account")
     ;
 
-    final ArrayList<MinecraftList> lv = new ArrayList<>();
+    final MinecraftList lv = new MinecraftList(Lang.get("minecraft.groups.name"), getIcon());
 
     public final AtomicBoolean
             checkHashWeb = new AtomicBoolean(true),
@@ -216,6 +218,14 @@ public class MinecraftSupport extends Plugin {
     public MinecraftSupport(final PluginContext context) {
         super(context);
 
+        {
+            boolean s1 = false;
+            try {
+                s1 = Class.forName("UIL.base.IButton").getMethod("smooth", boolean.class) != null;
+            } catch (final Exception ignored) {}
+            buttonSmooth = s1;
+        }
+
         javaSupport = (JavaSupport) getContext(JavaSupport.ID).getPlugin();
 
         JsonDict d = null;
@@ -263,10 +273,6 @@ public class MinecraftSupport extends Plugin {
 
         scanDir();
 
-        /*addAccount(new MCOfflineAccount(context) {{
-            name = Core.random(1, Core.CHARS_EN_LOW + Core.CHARS_EN_UP) + Core.random(7);
-        }});*/
-
         /*addAccountMaker(new IMaker<IAccount>() {
             @Override
             public String toString() {
@@ -291,45 +297,24 @@ public class MinecraftSupport extends Plugin {
 
         addMarket(assetManager = new MCAssetManager(this, context.getIcon()));
         addMarket(market = new MinecraftMarket(context, "minecraft-support.market", context.getIcon()));
-        market.checkForUpdates();
-        /*try {
-            if (new File(context.getPluginData(), "config.json").exists())
-                System.out.println(Json.parse(Files.newInputStream(new File(context.getPluginData(), "config.json").toPath()), true, StandardCharsets.UTF_8));
-        } catch (final IOException ex) {
-            ex.printStackTrace();
-        }*/
     }
 
-    public void addList(final Collection<MinecraftList> lists) {
-        synchronized (lv) {
-            lv.addAll(lists);
-            lv.notifyAll();
-        }
-    }
+    public void addList(final Collection<MinecraftList> lists) { lv.addAll(lists); }
+    public void addList(final MinecraftList... lists) { lv.addAll(Arrays.asList(lists)); }
+    public void removeList(final Collection<? extends IMinecraftVersion> lists) { lv.removeAll(lists); }
+    public void removeList(final IMinecraftVersion... lists) { lv.removeAll(Arrays.asList(lists)); }
 
-    public void addList(final MinecraftList... lists) {
-        synchronized (lv) {
-            Collections.addAll(lv, lists);
-            lv.notifyAll();
-        }
-    }
-
-    public void removeList(final MinecraftList... lists) {
-        synchronized (lv) {
-            for (final MinecraftList l : lists)
-                lv.remove(l);
-            lv.notifyAll();
-        }
-    }
-
-    public IMinecraftVersion getVersion(final String id) {
-        synchronized (lv) {
-            for (final MinecraftList l : lv) {
-                final IMinecraftVersion ver = l.get(id);
-                if (ver != null)
-                    return ver;
-            }
-        }
+    public static IMinecraftVersion findVersion(final MinecraftList list, final String id) {
+        for (final IMinecraftVersion version : list)
+            if (version instanceof MinecraftList) {
+                final IMinecraftVersion v = findVersion((MinecraftList) version, id);
+                if (v == null)
+                    continue;
+                return v;
+            } else if (version.getID().equals(id))
+                return version;
         return null;
     }
+
+    public IMinecraftVersion getVersion(final String id) { return findVersion(lv, id); }
 }
