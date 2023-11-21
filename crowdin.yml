@@ -1,0 +1,3 @@
+files:
+  - source: res/assets/*/langs
+    translation: /%original_path%/%locale_with_underscore%.ini
