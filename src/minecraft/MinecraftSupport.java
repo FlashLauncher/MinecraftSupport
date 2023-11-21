@@ -205,7 +205,9 @@ public class MinecraftSupport extends Plugin {
                         final JsonDict d = new JsonDict();
                         d.put("name", p.toString());
                         d.put("lastVersionId", ((MinecraftProfile) p).version);
-                        d.put("javaDir" + PLATFORM, ((MinecraftProfile) p).java.file.getAbsolutePath());
+                        final Java j = ((MinecraftProfile) p).java;
+                        if (j != null)
+                            d.put("javaDir" + PLATFORM, ((MinecraftProfile) p).java.file.getAbsolutePath());
                         pm.put(p.toString(), d);
                     }
                 Files.write(profilesFile.toPath(), profiles.toString().getBytes(StandardCharsets.UTF_8));
