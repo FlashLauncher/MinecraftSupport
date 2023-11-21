@@ -20,10 +20,13 @@ import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MinecraftMarket extends Market {
-    public static final WebClient client = new WebClient() {{
-        allowRedirect = true;
-        headers.put("User-Agent", "illa4257/MinecraftSupport/indev (mcflashlauncher@gmail.com)");
-    }};
+    public static final WebClient client = new WebClient();
+
+    static {
+        client.allowRedirect = true;
+        client.headers.put("User-Agent", "FlashLauncher/MinecraftSupport/0.2.2 (mcflashlauncher@gmail.com)");
+    }
+
     public final PluginContext context;
     public final MinecraftSupport plugin;
 
