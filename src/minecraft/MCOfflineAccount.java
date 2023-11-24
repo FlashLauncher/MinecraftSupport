@@ -1,6 +1,5 @@
 package minecraft;
 
-import Launcher.PluginContext;
 import Launcher.RunProc;
 import Launcher.base.IEditorContext;
 import Launcher.base.LaunchListener;
@@ -9,7 +8,6 @@ import UIL.base.IImage;
 import UIL.base.ITextField;
 import Utils.ListMap;
 
-import java.util.List;
 import java.util.UUID;
 
 public class MCOfflineAccount implements IMinecraftAccount {
