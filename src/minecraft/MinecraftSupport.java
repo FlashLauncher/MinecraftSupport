@@ -206,11 +206,13 @@ public class MinecraftSupport extends Plugin {
                     if (p instanceof MinecraftProfile) {
                         final JsonDict d = new JsonDict();
                         d.put("name", p.toString());
-                        final String ver = ((MinecraftProfile) p).version, jvmArgs = ((MinecraftProfile) p).javaArgs;
+                        final String ver = ((MinecraftProfile) p).version, jvmArgs = ((MinecraftProfile) p).javaArgs, gameArgs = ((MinecraftProfile) p).gameArgs;
                         if (ver != null)
                             d.put("lastVersionId", ver);
                         if (jvmArgs != null)
                             d.put("javaArgs" + PLATFORM, jvmArgs);
+                        if (gameArgs != null)
+                            d.put("gameArgs" + PLATFORM, gameArgs);
                         final Java j = ((MinecraftProfile) p).java;
                         if (j != null)
                             d.put("javaDir" + PLATFORM, ((MinecraftProfile) p).java.file.getAbsolutePath());
