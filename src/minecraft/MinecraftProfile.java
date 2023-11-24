@@ -25,7 +25,7 @@ public class MinecraftProfile implements IMinecraftProfile {
         javaList = ((JavaSupport) MinecraftProfile.this.context.getPlugin(JavaSupport.ID)).javaList;
     }
 
-    public String name, javaArgs = "";
+    public String name, javaArgs = "", gameArgs = "";
     public Java java = null;
     public String version = null;
 
@@ -36,7 +36,7 @@ public class MinecraftProfile implements IMinecraftProfile {
     public void open(final IEditorContext context) {
         final int cw = context.width() - 16, cw2 = (cw - 8) / 2;
         final AtomicBoolean skip = new AtomicBoolean(false);
-        final ITextField nf, jaf;
+        final ITextField nf, jaf, gaf;
         final IComboBox jf, vf;
         context.add(
                 UI.text("Profile name:").size(cw, 18).pos(8, 8),
@@ -160,6 +160,18 @@ public class MinecraftProfile implements IMinecraftProfile {
                     }
                 }).size(cw, 32).pos(8, 140),
 
+                gaf = UI.textField(javaArgs).hint("Game Args").onInput(new ITextField.InputListener() {
+                    @Override
+                    public boolean typed(final ITextField self, final char ch) {
+                        gameArgs = self.text();
+                        skip.set(true);
+                        synchronized (MinecraftProfile.this) {
+                            MinecraftProfile.this.notifyAll();
+                        }
+                        return true;
+                    }
+                }).size(cw, 32).pos(8, 140),
+
                 UI.button(LANG_REMOVE).foreground(UI.RED).size(cw, 32).pos(8, 180).onAction((s, e) -> {
                     MinecraftProfile.this.context.removeProfile(this);
                     context.close();
@@ -172,6 +184,7 @@ public class MinecraftProfile implements IMinecraftProfile {
             jf.text(java).image(java).update();
             vf.text(version).update();
             jaf.text(javaArgs).update();
+            gaf.text(gameArgs).update();
         });
         context.onClose(() -> {
             Core.offNotifyLoop(r);

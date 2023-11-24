@@ -163,6 +163,7 @@ public class MinecraftSupport extends Plugin {
                             p.name = d.getAsStringOrDefault("name", i.getKey());
                             p.version = d.getAsStringOrDefault("lastVersionId", null);
                             p.javaArgs = d.getAsStringOrDefault("javaArgs" + PLATFORM, "");
+                            p.gameArgs = d.getAsStringOrDefault("gameArgs" + PLATFORM, "");
                             String jp = d.getAsStringOrDefault("javaDir" + PLATFORM, null);
                             if (jp == null || jp.isEmpty())
                                 for (final Java java : javaSupport.javaList) {
