@@ -170,9 +170,9 @@ public class MinecraftProfile implements IMinecraftProfile {
                         }
                         return true;
                     }
-                }).size(cw, 32).pos(8, 140),
+                }).size(cw, 32).pos(8, 180),
 
-                UI.button(LANG_REMOVE).foreground(UI.RED).size(cw, 32).pos(8, 180).onAction((s, e) -> {
+                UI.button(LANG_REMOVE).foreground(UI.RED).size(cw, 32).pos(8, 220).onAction((s, e) -> {
                     MinecraftProfile.this.context.removeProfile(this);
                     context.close();
                 })
@@ -207,6 +207,9 @@ public class MinecraftProfile implements IMinecraftProfile {
             h.mkdirs();
 
         configuration.beginArgs.add(j.file.getAbsolutePath());
+
+        configuration.generalObjects.put("javaArgs", javaArgs.split(" "));
+        configuration.generalObjects.put("gameArgs", gameArgs.split(" "));
 
         return new LaunchListener() {
             private final LaunchListener ll;

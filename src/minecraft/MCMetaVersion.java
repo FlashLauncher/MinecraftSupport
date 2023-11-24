@@ -436,12 +436,24 @@ public class MCMetaVersion implements IMinecraftVersion {
                         ex.printStackTrace();
                     }
 
+                final String[] jl, gl;
+                Object v = configuration.generalObjects.get("javaArgs");
+                jl = v instanceof String[] ? (String[]) v : null;
+                v = configuration.generalObjects.get("gameArgs");
+                gl = v instanceof String[] ? (String[]) v : null;
+
                 if (args != null)
                     try {
                         if (args.has("jvm")) {
                             if (vars.containsKey("classpath") && configuration.generalObjects.containsKey("clientJar")) {
                                 vars.put("classpath", vars.get("classpath") + configuration.generalObjects.get("clientJar"));
                                 configuration.generalObjects.remove("clientJar");
+                            }
+                            if (jl != null) {
+                                configuration.generalObjects.remove("javaArgs");
+                                for (final String a : jl)
+                                    if (a != null && !a.isEmpty())
+                                        configuration.beginArgs.add(patch(a));
                             }
                             parse(args.getAsList("jvm"), configuration.beginArgs);
                         }
@@ -454,6 +466,10 @@ public class MCMetaVersion implements IMinecraftVersion {
                     l.clear();
                     if (p != null)
                         l.add(p);
+                    if (jl != null)
+                        for (final String a : gl)
+                            if (a != null && !a.isEmpty())
+                                l.add(patch(a));
                     l.add("-Djava.library.path=" + vars.get("natives_directory"));
                     l.add("-cp");
                     l.add(vars.get("classpath") + configuration.generalObjects.get("clientJar"));
@@ -470,14 +486,25 @@ public class MCMetaVersion implements IMinecraftVersion {
 
                 if (args != null)
                     try {
-                        if (args.has("game"))
+                        if (args.has("game")) {
+                            if (gl != null) {
+                                configuration.generalObjects.remove("gameArgs");
+                                for (final String a : gl)
+                                    if (a != null && !a.isEmpty())
+                                        configuration.endArgs.add(patch(a));
+                            }
                             parse(args.getAsList("game"), configuration.endArgs);
+                        }
                     } catch (final Exception ex) {
                         ex.printStackTrace();
                     }
                 else if (dict.has("minecraftArguments"))
                     try {
                         configuration.endArgs.clear();
+                        if (gl != null)
+                            for (final String a : gl)
+                                if (a != null && !a.isEmpty())
+                                    configuration.endArgs.add(patch(a));
                         for (final String a : dict.getAsString("minecraftArguments").split(" ")) {
                             if (a.isEmpty())
                                 continue;
