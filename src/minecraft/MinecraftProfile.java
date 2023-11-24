@@ -12,6 +12,7 @@ import Utils.JavaSupport;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MinecraftProfile implements IMinecraftProfile {
     public final PluginContext context;
@@ -24,7 +25,7 @@ public class MinecraftProfile implements IMinecraftProfile {
         javaList = ((JavaSupport) MinecraftProfile.this.context.getPlugin(JavaSupport.ID)).javaList;
     }
 
-    public String name;
+    public String name, javaArgs = "";
     public Java java = null;
     public String version = null;
 
@@ -34,18 +35,25 @@ public class MinecraftProfile implements IMinecraftProfile {
     @Override
     public void open(final IEditorContext context) {
         final int cw = context.width() - 16, cw2 = (cw - 8) / 2;
+        final AtomicBoolean skip = new AtomicBoolean(false);
+        final ITextField nf, jaf;
+        final IComboBox jf, vf;
         context.add(
                 UI.text("Profile name:").size(cw, 18).pos(8, 8),
-                UI.textField(name).size(cw, 32).pos(8, 34).onInput(new ITextField.InputListener() {
+                nf = UI.textField(name).size(cw, 32).pos(8, 34).onInput(new ITextField.InputListener() {
                     @Override
-                    public boolean typed(ITextField self, char ch) {
+                    public boolean typed(final ITextField self, final char ch) {
                         name = self.text();
+                        skip.set(true);
+                        synchronized (MinecraftProfile.this) {
+                            MinecraftProfile.this.notifyAll();
+                        }
                         return true;
                     }
                 }),
 
                 UI.text("Java:").size(cw2, 18).pos(8, 74),
-                UI.comboBox().text(java).image(java).size(cw2, 32).pos(8, 100).imageOffset(4).onList(le -> {
+                jf = UI.comboBox().text(java).image(java).size(cw2, 32).pos(8, 100).imageOffset(4).onList(le -> {
                     final IComboBox self = le.getSelf();
                     final IContainer container = le.getContainer();
                     final ContainerListBuilder clb = new ContainerListBuilder(UI.scrollPane().content(UI.panel().borderRadius(UI.ZERO)), 150, 8)
@@ -58,6 +66,10 @@ public class MinecraftProfile implements IMinecraftProfile {
                             clb.add(UI.button(j, j.icon).imageAlign(ImgAlign.TOP).imageOffset(20).onAction((s, e) -> {
                                 le.close();
                                 self.text(java = j).image(java.icon).focus();
+                                skip.set(true);
+                                synchronized (this) {
+                                    notifyAll();
+                                }
                             }));
                         clb.update();
                     });
@@ -70,7 +82,7 @@ public class MinecraftProfile implements IMinecraftProfile {
                 }),
 
                 UI.text("Game version:").size(cw2, 18).pos(cw2 + 16, 74),
-                UI.comboBox().text(version).size(cw2, 32).pos(cw2 + 16, 100).imageOffset(4).onList(le -> {
+                vf = UI.comboBox().text(version).size(cw2, 32).pos(cw2 + 16, 100).imageOffset(4).onList(le -> {
                     final IContainer container = le.getContainer().size(context.width(), context.height());
                     final MinecraftList lv = plugin.lv;
 
@@ -110,8 +122,12 @@ public class MinecraftProfile implements IMinecraftProfile {
                                             continue;
                                         }
                                         clb.add(UI.button().text(ver).onAction((s, e) -> {
-                                            version = ver.getID();
+                                            le.getSelf().text(version = ver.getID()).update();
                                             le.close();
+                                            skip.set(true);
+                                            synchronized (MinecraftProfile.this) {
+                                                MinecraftProfile.this.notifyAll();
+                                            }
                                         }));
                                     }
                                     clb.update();
@@ -132,12 +148,35 @@ public class MinecraftProfile implements IMinecraftProfile {
                     return context.getContainer();
                 }),
 
-                UI.button(LANG_REMOVE).size(cw, 32).pos(8, 140).onAction((s, e) -> {
+                jaf = UI.textField(javaArgs).hint("Java Args").onInput(new ITextField.InputListener() {
+                    @Override
+                    public boolean typed(final ITextField self, final char ch) {
+                        javaArgs = self.text();
+                        skip.set(true);
+                        synchronized (MinecraftProfile.this) {
+                            MinecraftProfile.this.notifyAll();
+                        }
+                        return true;
+                    }
+                }).size(cw, 32).pos(8, 140),
+
+                UI.button(LANG_REMOVE).foreground(UI.RED).size(cw, 32).pos(8, 180).onAction((s, e) -> {
                     MinecraftProfile.this.context.removeProfile(this);
                     context.close();
                 })
         );
-        context.onClose(plugin::saveProfiles);
+        final Runnable r = Core.onNotifyLoop(this, () -> {
+            if (skip.getAndSet(false))
+                return;
+            nf.text(name).update();
+            jf.text(java).image(java).update();
+            vf.text(version).update();
+            jaf.text(javaArgs).update();
+        });
+        context.onClose(() -> {
+            Core.offNotifyLoop(r);
+            plugin.saveProfiles();
+        });
     }
 
     @Override

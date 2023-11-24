@@ -162,6 +162,7 @@ public class MinecraftSupport extends Plugin {
                             final MinecraftProfile p = new MinecraftProfile(getContext());
                             p.name = d.getAsStringOrDefault("name", i.getKey());
                             p.version = d.getAsStringOrDefault("lastVersionId", null);
+                            p.javaArgs = d.getAsStringOrDefault("javaArgs" + PLATFORM, "");
                             String jp = d.getAsStringOrDefault("javaDir" + PLATFORM, null);
                             if (jp == null || jp.isEmpty())
                                 for (final Java java : javaSupport.javaList) {
@@ -204,7 +205,11 @@ public class MinecraftSupport extends Plugin {
                     if (p instanceof MinecraftProfile) {
                         final JsonDict d = new JsonDict();
                         d.put("name", p.toString());
-                        d.put("lastVersionId", ((MinecraftProfile) p).version);
+                        final String ver = ((MinecraftProfile) p).version, jvmArgs = ((MinecraftProfile) p).javaArgs;
+                        if (ver != null)
+                            d.put("lastVersionId", ver);
+                        if (jvmArgs != null)
+                            d.put("javaArgs" + PLATFORM, jvmArgs);
                         final Java j = ((MinecraftProfile) p).java;
                         if (j != null)
                             d.put("javaDir" + PLATFORM, ((MinecraftProfile) p).java.file.getAbsolutePath());
