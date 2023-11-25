@@ -160,11 +160,28 @@ public class MinecraftSupport extends Plugin {
                         if (i.getValue().isDict()) {
                             final JsonDict d = i.getValue().getAsDict();
                             final MinecraftProfile p = new MinecraftProfile(getContext());
+
                             p.name = d.getAsStringOrDefault("name", i.getKey());
+                            d.remove("name");
+
                             p.version = d.getAsStringOrDefault("lastVersionId", null);
+                            d.remove("lastVersionId");
+
                             p.javaArgs = d.getAsStringOrDefault("javaArgs" + PLATFORM, "");
+                            d.remove("javaArgs");
+
                             p.gameArgs = d.getAsStringOrDefault("gameArgs" + PLATFORM, "");
-                            String jp = d.getAsStringOrDefault("javaDir" + PLATFORM, null);
+                            d.remove("gameArgs");
+
+                            final String
+                                    gd = d.getAsStringOrDefault("gameDir", null),
+                                    jp = d.getAsStringOrDefault("javaDir" + PLATFORM, null);
+                            d.remove("gameDir");
+                            d.remove("javaDir");
+
+                            if (gd != null && !gd.isEmpty())
+                                p.homeDir = FS.resolve(FLCore.LAUNCHER_DIR, gd);
+
                             if (jp == null || jp.isEmpty())
                                 for (final Java java : javaSupport.javaList) {
                                     p.java = java;
@@ -182,6 +199,9 @@ public class MinecraftSupport extends Plugin {
                                     javaSupport.javaList.add(p.java);
                                 }
                             }
+
+                            p.data = d;
+
                             addProfile(p);
                         }
                 }
@@ -204,18 +224,32 @@ public class MinecraftSupport extends Plugin {
                 pm.clear();
                 for (final IProfile p : l)
                     if (p instanceof MinecraftProfile) {
-                        final JsonDict d = new JsonDict();
+                        final MinecraftProfile mp = (MinecraftProfile) p;
+                        final JsonDict d = mp.data;
                         d.put("name", p.toString());
-                        final String ver = ((MinecraftProfile) p).version, jvmArgs = ((MinecraftProfile) p).javaArgs, gameArgs = ((MinecraftProfile) p).gameArgs;
+                        final String ver = mp.version, jvmArgs = mp.javaArgs, gameArgs = mp.gameArgs;
                         if (ver != null)
                             d.put("lastVersionId", ver);
+                        else
+                            d.remove("lastVersionId");
                         if (jvmArgs != null)
                             d.put("javaArgs" + PLATFORM, jvmArgs);
+                        else
+                            d.remove("javaArgs");
                         if (gameArgs != null)
                             d.put("gameArgs" + PLATFORM, gameArgs);
-                        final Java j = ((MinecraftProfile) p).java;
+                        else
+                            d.remove("gameArgs");
+                        final File home = mp.homeDir;
+                        if (home != null)
+                            d.put("gameDir", FS.relative(FLCore.LAUNCHER_DIR, home));
+                        else
+                            d.remove("gameDir");
+                        final Java j = mp.java;
                         if (j != null)
-                            d.put("javaDir" + PLATFORM, ((MinecraftProfile) p).java.file.getAbsolutePath());
+                            d.put("javaDir" + PLATFORM, FS.relative(FLCore.LAUNCHER_DIR, mp.java.file.getAbsoluteFile()));
+                        else
+                            d.remove("javaDir");
                         pm.put(p.toString(), d);
                     }
                 Files.write(profilesFile.toPath(), profiles.toString().getBytes(StandardCharsets.UTF_8));
