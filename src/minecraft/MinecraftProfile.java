@@ -1,6 +1,7 @@
 package minecraft;
 
 import Launcher.*;
+import Launcher.base.IAccount;
 import Launcher.base.IEditorContext;
 import Launcher.base.LaunchListener;
 import UIL.*;
@@ -8,6 +9,7 @@ import UIL.base.*;
 import Utils.Core;
 import Utils.Java;
 import Utils.JavaSupport;
+import Utils.json.JsonDict;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -25,12 +27,21 @@ public class MinecraftProfile implements IMinecraftProfile {
         javaList = ((JavaSupport) MinecraftProfile.this.context.getPlugin(JavaSupport.ID)).javaList;
     }
 
-    public String name, javaArgs = "", gameArgs = "";
+    public JsonDict data = null;
+
+    public String name, version = null, javaArgs = "", gameArgs = "";
     public Java java = null;
-    public String version = null;
+
+    public File homeDir = null;
 
     @Override public String toString() { return name; }
     @Override public IImage getIcon() { return context.getIcon(); }
+
+    @Override
+    public File home(IAccount account) {
+        final File h = homeDir;
+        return h == null ? new File(plugin.homeDir, name) : h;
+    }
 
     @Override
     public void open(final IEditorContext context) {
@@ -194,7 +205,7 @@ public class MinecraftProfile implements IMinecraftProfile {
 
     @Override
     public LaunchListener init(final RunProc configuration) {
-        final File h = new File(plugin.homeDir, name);
+        final File th = homeDir, h = th == null ? new File(plugin.homeDir, name) : th;
         configuration.workDir = h;
         configuration.generalObjects.put("gameDir", plugin.gameDir);
 
