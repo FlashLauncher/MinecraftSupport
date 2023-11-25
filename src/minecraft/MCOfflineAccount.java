@@ -26,17 +26,12 @@ public class MCOfflineAccount implements IMinecraftAccount {
 
     final MinecraftSupport plugin;
 
-    public MCOfflineAccount(final MinecraftSupport plugin) {
-        this.plugin = plugin;
-    }
+    public MCOfflineAccount(final MinecraftSupport plugin) { this.plugin = plugin; }
 
     String name = null, accessToken = null;
     UUID uuid = null;
 
-    @Override
-    public IImage getIcon() {
-        return ICON_OFFLINE;
-    }
+    @Override public IImage getIcon() { return ICON_OFFLINE; }
 
     @Override
     public void open(final IEditorContext editor) {
@@ -61,7 +56,7 @@ public class MCOfflineAccount implements IMinecraftAccount {
                         return ITextField.InputListener.super.released(self);
                     }
                 }).size(editor.width() - 16, 32).pos(8, 8),
-                UI.button(LANG_REMOVE).size(editor.width() - 16, 32).pos(8, 48).onAction((s, e) -> {
+                UI.button(LANG_REMOVE).foreground(UI.RED).size(editor.width() - 16, 32).pos(8, 48).onAction((s, e) -> {
                     plugin.getContext().removeAccount(this);
                     editor.close();
                 })
