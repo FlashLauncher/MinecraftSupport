@@ -228,28 +228,35 @@ public class MinecraftSupport extends Plugin {
                         final JsonDict d = mp.data;
                         d.put("name", p.toString());
                         final String ver = mp.version, jvmArgs = mp.javaArgs, gameArgs = mp.gameArgs;
+
                         if (ver != null)
                             d.put("lastVersionId", ver);
                         else
                             d.remove("lastVersionId");
+
                         if (jvmArgs != null)
                             d.put("javaArgs" + PLATFORM, jvmArgs);
                         else
-                            d.remove("javaArgs");
+                            d.remove("javaArgs" + PLATFORM);
+
                         if (gameArgs != null)
                             d.put("gameArgs" + PLATFORM, gameArgs);
                         else
-                            d.remove("gameArgs");
+                            d.remove("gameArgs" + PLATFORM);
+
                         final File home = mp.homeDir;
+
                         if (home != null)
                             d.put("gameDir", FS.relative(FLCore.LAUNCHER_DIR, home));
                         else
                             d.remove("gameDir");
+
                         final Java j = mp.java;
+
                         if (j != null)
                             d.put("javaDir" + PLATFORM, FS.relative(FLCore.LAUNCHER_DIR, mp.java.file.getAbsoluteFile()));
                         else
-                            d.remove("javaDir");
+                            d.remove("javaDir" + PLATFORM);
                         pm.put(p.toString(), d);
                     }
                 Files.write(profilesFile.toPath(), profiles.toString().getBytes(StandardCharsets.UTF_8));
