@@ -226,7 +226,8 @@ public class MinecraftSupport extends Plugin {
                     if (p instanceof MinecraftProfile) {
                         final MinecraftProfile mp = (MinecraftProfile) p;
                         final JsonDict d = mp.data;
-                        d.put("name", p.toString());
+
+                        d.put("name", mp.name);
                         final String ver = mp.version, jvmArgs = mp.javaArgs, gameArgs = mp.gameArgs;
 
                         if (ver != null)
@@ -303,6 +304,7 @@ public class MinecraftSupport extends Plugin {
             @Override
             public void make(final IMakerContext<IProfile> maker) {
                 maker.end(addProfile(new MinecraftProfile(getContext()) {{
+                    data = new JsonDict();
                     name = Core.random(1, Core.CHARS_EN_LOW + Core.CHARS_EN_UP) + Core.random(7);
                 }}));
             }
