@@ -225,6 +225,10 @@ public class MinecraftSupport extends Plugin {
                 for (final IProfile p : l)
                     if (p instanceof MinecraftProfile) {
                         final MinecraftProfile mp = (MinecraftProfile) p;
+                        if (mp.data == null) {
+                            System.out.println("MinecraftProfile data is null!");
+                            mp.data = new JsonDict();
+                        }
                         final JsonDict d = mp.data;
 
                         d.put("name", mp.name);
