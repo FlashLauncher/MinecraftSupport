@@ -237,6 +237,22 @@ public class MinecraftProfile implements IMinecraftProfile {
                     ll.launch();
             }
 
+            private boolean h = true;
+
+            @Override
+            public void outLine(final String line) {
+                if (h && line.contains("LWJGL")) {
+                    h = false;
+                    configuration.setVisible(false);
+                }
+                System.out.println("[GAME/out] " + line);
+            }
+
+            @Override
+            public void errLine(final String line) {
+                System.out.println("[GAME/err] " + line);
+            }
+
             {
                 LaunchListener r = null;
                 try {
