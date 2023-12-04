@@ -241,6 +241,10 @@ public class MinecraftProfile implements IMinecraftProfile {
 
             @Override
             public void outLine(final String line) {
+                if (line.contains("Session ID is")) {
+                    System.out.println("[plugin] Session ID was hidden.");
+                    return;
+                }
                 if (h) {
                     if (line.contains("LWJGL")) {
                         h = false;
