@@ -241,9 +241,16 @@ public class MinecraftProfile implements IMinecraftProfile {
 
             @Override
             public void outLine(final String line) {
-                if (h && line.contains("LWJGL")) {
-                    h = false;
-                    configuration.setVisible(false);
+                if (h) {
+                    if (line.contains("LWJGL")) {
+                        h = false;
+                        configuration.setVisible(false);
+                    }
+                } else {
+                    if (line.contains("Stopping!")) {
+                        h = true;
+                        configuration.setVisible(true);
+                    }
                 }
                 System.out.println("[GAME/out] " + line);
             }
