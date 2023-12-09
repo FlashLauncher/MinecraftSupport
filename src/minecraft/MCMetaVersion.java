@@ -293,47 +293,60 @@ public class MCMetaVersion implements IMinecraftVersion {
                                 } catch (final Exception ex) {
                                     ex.printStackTrace();
                                 }
-                        } else if ((te = d.get("url")) != null && te.isString())
+                        } else
                             try {
+                                //if (d.has("serverreq") && !d.getAsBool("clientreq", false))
+                                //    continue;
                                 final String p = getPathByName(n);
                                 classpath.append(new File(libs, p).getAbsolutePath()).append(s);
-                                final String u = (te.getAsString().endsWith("/") ? te.getAsString() : te.getAsString() + '/') + p;
-                                sg.addTask(new Task() {
-                                    final File file = new File(libs, p);
+                                if ((te = d.get("url")) != null && te.isString()) {
+                                    final String u = (te.getAsString().endsWith("/") ? te.getAsString() : te.getAsString() + '/') + p;
+                                    sg.addTask(new Task() {
+                                        final File file = new File(libs, p);
 
-                                    @Override
-                                    public void run() throws Throwable {
-                                        try {
-                                            if (!file.exists()) {
-                                                while (true) {
-                                                    ByteArrayOutputStream os = new ByteArrayOutputStream();
-                                                    final String sha1;
-                                                    if (hw1) {
-                                                        client.open("GET", URI.create(u + ".sha1"), os, true).auto();
-                                                        sha1 = os.toString();
-                                                        os = new ByteArrayOutputStream();
-                                                    } else
-                                                        sha1 = null;
-                                                    client.open("GET", URI.create(u), os, true).auto();
-                                                    final byte[] data = os.toByteArray();
-                                                    if (!hw1 || Core.hashToHex("sha1", data).equals(sha1)) {
-                                                        if (!file.getParentFile().exists())
-                                                            file.getParentFile().mkdirs();
-                                                        Files.write(file.toPath(), data);
-                                                        break;
+                                        @Override
+                                        public void run() {
+                                            try {
+                                                if (!file.exists())
+                                                    m1:
+                                                    while (true) {
+                                                        ByteArrayOutputStream os = new ByteArrayOutputStream();
+                                                        final String sha1;
+                                                        if (hw1) {
+                                                            client.open("GET", URI.create(u + ".sha1"), os, true).auto();
+                                                            sha1 = os.toString();
+                                                            os = new ByteArrayOutputStream();
+                                                        } else
+                                                            sha1 = null;
+                                                        final WebResponse r = client.open("GET", URI.create(u), os, true);
+                                                        r.auto();
+                                                        switch (r.getResponseCode()) {
+                                                            case 404:
+                                                                break m1;
+                                                            case 200:
+                                                                break;
+                                                            default:
+                                                                continue;
+                                                        }
+                                                        final byte[] data = os.toByteArray();
+                                                        if (!hw1 || Core.hashToHex("sha1", data).equals(sha1)) {
+                                                            if (!file.getParentFile().exists())
+                                                                file.getParentFile().mkdirs();
+                                                            Files.write(file.toPath(), data);
+                                                            break;
+                                                        }
                                                     }
-                                                }
+                                            } catch (final Exception ex) {
+                                                ex.printStackTrace();
                                             }
-                                        } catch (final Exception ex) {
-                                            ex.printStackTrace();
                                         }
-                                    }
 
-                                    @Override
-                                    public String toString() {
-                                        return "Downloading lib ... (" + sg.getProgress() + "/" + sg.getMaxProgress() + ") - " + n;
-                                    }
-                                });
+                                        @Override
+                                        public String toString() {
+                                            return "Downloading lib ... (" + sg.getProgress() + "/" + sg.getMaxProgress() + ") - " + n;
+                                        }
+                                    });
+                                }
                             } catch (final Exception ex) {
                                 ex.printStackTrace();
                             }
@@ -354,12 +367,19 @@ public class MCMetaVersion implements IMinecraftVersion {
                                 @Override
                                 public void run() throws Throwable {
                                     if (!f.exists() || sha1 != null && !Core.hashToHex("sha1", Files.readAllBytes(f.toPath())).equals(sha1))
+                                        m1:
                                         while (true) {
                                             final ByteArrayOutputStream os = new ByteArrayOutputStream();
                                             final WebResponse r = client.open("GET", uri, os, true);
                                             r.auto();
-                                            if (r.getResponseCode() != 200)
-                                                continue;
+                                            switch (r.getResponseCode()) {
+                                                case 404:
+                                                    break m1;
+                                                case 200:
+                                                    break;
+                                                default:
+                                                    continue;
+                                            }
                                             final byte[] data = os.toByteArray();
                                             if (sha1 == null || Core.hashToHex("sha1", data).equals(sha1)) {
                                                 Files.write(f.toPath(), data);
