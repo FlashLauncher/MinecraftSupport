@@ -17,6 +17,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MinecraftProfile implements IMinecraftProfile {
+    public final LangItem LANG_CONTENT_MGR = Lang.get("minecraft-support.content-manager");
+
     public final PluginContext context;
     public final MinecraftSupport plugin;
     private final ConcurrentLinkedQueue<Java> javaList;
@@ -183,7 +185,65 @@ public class MinecraftProfile implements IMinecraftProfile {
                     }
                 }).size(cw, 32).pos(8, 180),
 
-                UI.button(LANG_REMOVE).foreground(UI.RED).size(cw, 32).pos(8, 220).onAction((s, e) -> {
+                UI.button(LANG_CONTENT_MGR).size(cw, 32).pos(8, 220).onAction((s, e) -> {
+                    final IDialog d = UI.dialog(null, LANG_CONTENT_MGR.toString())
+                            .icon(FlashLauncher.ICON)
+                            .resizable(false)
+                            .size(720, 380)
+                            .background(UI.color(32, 32, 32));
+                    final ContainerListBuilder clb = new ContainerListBuilder(UI.scrollPane().content(
+                            UI.panel()
+                    ).size(704, 324).pos(8, 48), 680, 72, 8);
+                    final ITextField sf = UI.textField();
+                    final Runnable r = () -> {
+                        clb.clear();
+                        final ArrayList<String> loaders = new ArrayList<>();
+                        loaders.add("minecraft");
+                        String ver = version;
+                        if (ver.startsWith("fabric-loader-")) {
+                            loaders.add("fabric");
+                            ver = ver.substring(14);
+                            final int i = ver.indexOf('-');
+                            if (i != -1)
+                                ver = ver.substring(i + 1);
+                        } else if (ver.startsWith("Fabric ")) {
+                            loaders.add("fabric");
+                            ver = ver.substring(7);
+                        } else if (ver.startsWith("Forge ")) {
+                            loaders.add("forge");
+                            ver = ver.substring(6);
+                        } else {
+                            int i = ver.indexOf("-forge");
+                            if (i != -1) {
+                                loaders.add("forge");
+                                ver = ver.substring(0, i);
+                            }
+                        }
+                        final MCFindEvent evt = new MCFindEvent(sf.text(), ver, loaders);
+                        for (final MinecraftContent el : plugin.cll)
+                            if (el.filter(evt))
+                                clb.add(UI.panel().add(
+                                        UI.panel().size(582, 18).pos(72, 8).background(UI.PURPLE),
+                                        UI.text(el.getName().toString()).ha(HAlign.LEFT).size(582, 18).pos(72, 8),
+                                        UI.imageView(ImagePosMode.CENTER, ImageSizeMode.INSIDE).image(el.getIcon()).size(56, 56).pos(8, 8),
+                                        UI.text(el.getAuthor()).ha(HAlign.LEFT).foreground(Theme.AUTHOR_FOREGROUND_COLOR).size(608, 18).pos(72, 30)
+                                ));
+                        clb.update();
+                    };
+                    d.add(
+                        UI.comboBox().size(128, 32).pos(8, 8),
+
+                        sf.hint(Lang.get("market.hint")).size(568, 32).pos(144, 8).onAction((s1) -> r.run()),
+                        clb
+                    ).pack().center(null);
+                    UI.run(() -> {
+                        final Runnable l = Core.onNotifyLoop(plugin.cl, r);
+                        d.onClose(s1 -> Core.offNotifyLoop(l));
+                    });
+                    d.visible(true);
+                }),
+
+                UI.button(LANG_REMOVE).foreground(UI.RED).size(cw, 32).pos(8, 260).onAction((s, e) -> {
                     MinecraftProfile.this.context.removeProfile(this);
                     context.close();
                 })

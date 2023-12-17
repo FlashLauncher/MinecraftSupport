@@ -15,10 +15,8 @@ import Utils.json.JsonElement;
 import Utils.json.JsonList;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -45,6 +43,9 @@ public class MinecraftSupport extends Plugin {
     ;
 
     final MinecraftList lv = new MinecraftList(Lang.get("minecraft.groups.name"), getIcon());
+
+    final Object cl = new Object();
+    final ArrayList<MinecraftContent> cll = new ArrayList<>();
 
     public final AtomicBoolean
             checkHashWeb = new AtomicBoolean(true),
@@ -361,4 +362,11 @@ public class MinecraftSupport extends Plugin {
     public void removeList(final Collection<? extends IMinecraftVersion> lists) { lv.removeAll(lists); }
     public void removeList(final IMinecraftVersion... lists) { lv.removeAll(Arrays.asList(lists)); }
     public IMinecraftVersion getVersion(final String id) { return lv.get(id); }
+
+    public void addContent(final MinecraftContent content) {
+        synchronized (cl) {
+            cll.add(content);
+            cl.notifyAll();
+        }
+    }
 }
