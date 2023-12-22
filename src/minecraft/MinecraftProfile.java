@@ -9,6 +9,7 @@ import UIL.base.*;
 import Utils.Core;
 import Utils.Java;
 import Utils.JavaSupport;
+import Utils.Runnable1a;
 import Utils.json.JsonDict;
 
 import java.io.File;
@@ -192,8 +193,12 @@ public class MinecraftProfile implements IMinecraftProfile {
                             .size(720, 380)
                             .background(UI.color(32, 32, 32));
                     final ContainerListBuilder clb = new ContainerListBuilder(UI.scrollPane().content(
-                            UI.panel()
+                            UI.panel().borderRadius(UI.ZERO)
                     ).size(704, 324).pos(8, 48), 680, 72, 8);
+                    final File th = homeDir;
+                    final MCProfileScanner scanner = new MCProfileScanner(th == null ? new File(plugin.homeDir, name) : th);
+                    for (final Runnable1a<MCProfileScanner> l : plugin.listeners)
+                        l.run(scanner);
                     final ITextField sf = UI.textField();
                     final Runnable r = () -> {
                         clb.clear();
@@ -220,14 +225,22 @@ public class MinecraftProfile implements IMinecraftProfile {
                             }
                         }
                         final MCFindEvent evt = new MCFindEvent(sf.text(), ver, loaders);
-                        for (final MinecraftContent el : plugin.cll)
-                            if (el.filter(evt))
-                                clb.add(UI.panel().add(
-                                        UI.panel().size(582, 18).pos(72, 8).background(UI.PURPLE),
-                                        UI.text(el.getName().toString()).ha(HAlign.LEFT).size(582, 18).pos(72, 8),
-                                        UI.imageView(ImagePosMode.CENTER, ImageSizeMode.INSIDE).image(el.getIcon()).size(56, 56).pos(8, 8),
-                                        UI.text(el.getAuthor()).ha(HAlign.LEFT).foreground(Theme.AUTHOR_FOREGROUND_COLOR).size(608, 18).pos(72, 30)
-                                ));
+                        for (final MinecraftContent el : plugin.cll) {
+                            final MinecraftContent.MinecraftContentVersion ver1 = el.filter(evt);
+                            if (ver1 == null)
+                                continue;
+                            final AtomicBoolean v = new AtomicBoolean(scanner.isInstalled(el));
+                            final IContainer c = UI.panel().background(v.get() ? Theme.BACKGROUND_ACCENT_COLOR : Theme.BACKGROUND_COLOR);
+                            clb.add(c.add(
+                                    UI.text(el.getName() + " (" + ver1 + ')').ha(HAlign.LEFT).size(598, 18).pos(72, 8),
+                                    UI.imageView(ImagePosMode.CENTER, ImageSizeMode.INSIDE).image(el.getIcon()).size(56, 56).pos(8, 8),
+                                    UI.text(el.getAuthor()).ha(HAlign.LEFT).foreground(Theme.AUTHOR_FOREGROUND_COLOR).size(608, 18).pos(72, 30),
+                                    UI.button().background(UI.TRANSPARENT).size(clb.getChildWidth(), clb.getChildHeight()).onAction((self, event) -> {
+                                        v.set(!v.get());
+                                        c.background(v.get() ? Theme.BACKGROUND_ACCENT_COLOR : Theme.BACKGROUND_COLOR).update();
+                                    })
+                            ));
+                        }
                         clb.update();
                     };
                     d.add(
