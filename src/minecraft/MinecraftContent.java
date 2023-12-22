@@ -16,5 +16,14 @@ public abstract class MinecraftContent extends CIMeta {
     /**
      * @since MinecraftSupport 0.2.4
      */
-    public boolean filter(final MCFindEvent event) { return true; }
+    public MinecraftContentVersion filter(final MCFindEvent event) { return null; }
+
+
+
+    /**
+     * @since MinecraftSupport 0.2.4
+     */
+    public static abstract class MinecraftContentVersion {
+        public abstract MinecraftContent getContent();
+    }
 }
