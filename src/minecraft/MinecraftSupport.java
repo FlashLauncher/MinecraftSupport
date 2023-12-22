@@ -53,6 +53,8 @@ public class MinecraftSupport extends Plugin {
 
     public final MinecraftList all, installed;
 
+    final ConcurrentLinkedQueue<Runnable1a<MCProfileScanner>> listeners = new ConcurrentLinkedQueue<>();
+
     final File cfgFile = new File(getPluginData(), "config.json");
     final JsonDict cfg;
 
@@ -357,6 +359,9 @@ public class MinecraftSupport extends Plugin {
         addMarket(market = new MinecraftMarket(context, "minecraft-support.market", context.getIcon()));
     }
 
+    public boolean addScanListener(final Runnable1a<MCProfileScanner> listener) { return listeners.add(listener); }
+    public boolean removeScanListener(final Runnable1a<MCProfileScanner> listener) { return listeners.remove(listener); }
+
     public void addList(final Collection<MinecraftList> lists) { lv.addAll(lists); }
     public void addList(final MinecraftList... lists) { lv.addAll(Arrays.asList(lists)); }
     public void removeList(final Collection<? extends IMinecraftVersion> lists) { lv.removeAll(lists); }
@@ -366,6 +371,13 @@ public class MinecraftSupport extends Plugin {
     public void addContent(final MinecraftContent content) {
         synchronized (cl) {
             cll.add(content);
+            cl.notifyAll();
+        }
+    }
+
+    public void removeContent(final MinecraftContent content) {
+        synchronized (cl) {
+            cll.remove(content);
             cl.notifyAll();
         }
     }
