@@ -18,7 +18,15 @@ public abstract class MinecraftContent extends CIMeta {
      */
     public MinecraftContentVersion filter(final MCFindEvent event) { return null; }
 
+    /**
+     * @since MinecraftSupport 0.2.4
+     */
+    public void add(final MCFindEvent event, final MCProfileScanner scanner) throws Throwable {}
 
+    /**
+     * @since MinecraftSupport 0.2.4
+     */
+    public void remove(final MCFindEvent event, final MCProfileScanner scanner) throws Throwable {}
 
     /**
      * @since MinecraftSupport 0.2.4
