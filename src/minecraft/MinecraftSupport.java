@@ -1,10 +1,7 @@
 package minecraft;
 
 import Launcher.*;
-import Launcher.base.IAccount;
-import Launcher.base.IMakerContext;
-import Launcher.base.IMaker;
-import Launcher.base.IProfile;
+import Launcher.base.*;
 import UIL.Lang;
 import UIL.LangItem;
 import UIL.base.IImage;
@@ -54,6 +51,7 @@ public class MinecraftSupport extends Plugin {
     public final MinecraftList all, installed;
 
     final ConcurrentLinkedQueue<Runnable1a<MCProfileScanner>> listeners = new ConcurrentLinkedQueue<>();
+    final ConcurrentLinkedQueue<RRunnable1a<LaunchListener, MCLaunch>> launchListeners = new ConcurrentLinkedQueue<>();
 
     final File cfgFile = new File(getPluginData(), "config.json");
     final JsonDict cfg;
@@ -361,6 +359,9 @@ public class MinecraftSupport extends Plugin {
 
     public boolean addScanListener(final Runnable1a<MCProfileScanner> listener) { return listeners.add(listener); }
     public boolean removeScanListener(final Runnable1a<MCProfileScanner> listener) { return listeners.remove(listener); }
+
+    public boolean addLaunchListener(final RRunnable1a<LaunchListener, MCLaunch> listener) { return launchListeners.add(listener); }
+    public boolean removeLaunchListener(final RRunnable1a<LaunchListener, MCLaunch> listener) { return launchListeners.remove(listener); }
 
     public void addList(final Collection<MinecraftList> lists) { lv.addAll(lists); }
     public void addList(final MinecraftList... lists) { lv.addAll(Arrays.asList(lists)); }
