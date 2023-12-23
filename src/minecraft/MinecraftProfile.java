@@ -236,8 +236,16 @@ public class MinecraftProfile implements IMinecraftProfile {
                                     UI.imageView(ImagePosMode.CENTER, ImageSizeMode.INSIDE).image(el.getIcon()).size(56, 56).pos(8, 8),
                                     UI.text(el.getAuthor()).ha(HAlign.LEFT).foreground(Theme.AUTHOR_FOREGROUND_COLOR).size(608, 18).pos(72, 30),
                                     UI.button().background(UI.TRANSPARENT).size(clb.getChildWidth(), clb.getChildHeight()).onAction((self, event) -> {
-                                        v.set(!v.get());
-                                        c.background(v.get() ? Theme.BACKGROUND_ACCENT_COLOR : Theme.BACKGROUND_COLOR).update();
+                                        try {
+                                            if (v.get())
+                                                el.remove(evt, scanner);
+                                            else
+                                                el.add(evt, scanner);
+                                            v.set(!v.get());
+                                            c.background(v.get() ? Theme.BACKGROUND_ACCENT_COLOR : Theme.BACKGROUND_COLOR).update();
+                                        } catch (final Throwable ex) {
+                                            ex.printStackTrace();
+                                        }
                                     })
                             ));
                         }
@@ -295,57 +303,6 @@ public class MinecraftProfile implements IMinecraftProfile {
         configuration.generalObjects.put("javaArgs", javaArgs.split(" "));
         configuration.generalObjects.put("gameArgs", gameArgs.split(" "));
 
-        return new LaunchListener() {
-            private final LaunchListener ll;
-
-            @Override
-            public void preLaunch() {
-                if (ll != null)
-                    ll.preLaunch();
-            }
-
-            @Override
-            public void launch() {
-                if (ll != null)
-                    ll.launch();
-            }
-
-            private boolean h = true;
-
-            @Override
-            public void outLine(final String line) {
-                if (line.contains("Session ID is")) {
-                    System.out.println("[plugin] Session ID was hidden.");
-                    return;
-                }
-                if (h) {
-                    if (line.contains("LWJGL")) {
-                        h = false;
-                        configuration.setVisible(false);
-                    }
-                } else {
-                    if (line.contains("Stopping!")) {
-                        h = true;
-                        configuration.setVisible(true);
-                    }
-                }
-                System.out.println("[GAME/out] " + line);
-            }
-
-            @Override
-            public void errLine(final String line) {
-                System.out.println("[GAME/err] " + line);
-            }
-
-            {
-                LaunchListener r = null;
-                try {
-                    r = ver.init(configuration);
-                } catch (final Throwable ex) {
-                    ex.printStackTrace();
-                }
-                ll = r;
-            }
-        };
+        return new MCLaunch(this, configuration, ver);
     }
 }
