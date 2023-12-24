@@ -211,9 +211,18 @@ public class MinecraftProfile implements IMinecraftProfile {
                             final int i = ver.indexOf('-');
                             if (i != -1)
                                 ver = ver.substring(i + 1);
+                        } else if (ver.startsWith("quilt-loader-")) {
+                            loaders.add("quilt");
+                            ver = ver.substring(13);
+                            final int i = ver.indexOf('-');
+                            if (i != -1)
+                                ver = ver.substring(i + 1);
                         } else if (ver.startsWith("Fabric ")) {
                             loaders.add("fabric");
                             ver = ver.substring(7);
+                        } else if (ver.startsWith("Quilt ")) {
+                            loaders.add("quilt");
+                            ver = ver.substring(6);
                         } else if (ver.startsWith("Forge ")) {
                             loaders.add("forge");
                             ver = ver.substring(6);
@@ -239,8 +248,11 @@ public class MinecraftProfile implements IMinecraftProfile {
                                         try {
                                             if (v.get())
                                                 el.remove(evt, scanner);
-                                            else
+                                            else {
+                                                if (!scanner.home.exists())
+                                                    scanner.home.mkdirs();
                                                 el.add(evt, scanner);
+                                            }
                                             v.set(!v.get());
                                             c.background(v.get() ? Theme.BACKGROUND_ACCENT_COLOR : Theme.BACKGROUND_COLOR).update();
                                         } catch (final Throwable ex) {
