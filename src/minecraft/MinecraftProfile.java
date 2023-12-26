@@ -238,17 +238,27 @@ public class MinecraftProfile implements IMinecraftProfile {
                             final MinecraftContent.MinecraftContentVersion ver1 = el.filter(evt);
                             if (ver1 == null)
                                 continue;
-                            final AtomicBoolean v = new AtomicBoolean(scanner.isInstalled(el));
+                            final IText name = UI.text();
+                            final AtomicBoolean v;
+                            {
+                                final MinecraftContent.MinecraftContentVersion ver2 = scanner.get(el);
+                                v = new AtomicBoolean(ver2 != null);
+                                name.text(
+                                        ver2 == null || ver2.equals(ver1) ? el.getName() + " (" + ver1 + ')' :
+                                                el.getName() + " (" + ver2 + " -> " + ver1 + ')'
+                                );
+                            }
                             final IContainer c = UI.panel().background(v.get() ? Theme.BACKGROUND_ACCENT_COLOR : Theme.BACKGROUND_COLOR);
                             clb.add(c.add(
-                                    UI.text(el.getName() + " (" + ver1 + ')').ha(HAlign.LEFT).size(598, 18).pos(72, 8),
+                                    name.ha(HAlign.LEFT).size(598, 18).pos(72, 8),
                                     UI.imageView(ImagePosMode.CENTER, ImageSizeMode.INSIDE).image(el.getIcon()).size(56, 56).pos(8, 8),
                                     UI.text(el.getAuthor()).ha(HAlign.LEFT).foreground(Theme.AUTHOR_FOREGROUND_COLOR).size(608, 18).pos(72, 30),
                                     UI.button().background(UI.TRANSPARENT).size(clb.getChildWidth(), clb.getChildHeight()).onAction((self, event) -> {
                                         try {
-                                            if (v.get())
+                                            if (v.get()) {
                                                 el.remove(evt, scanner);
-                                            else {
+                                                name.text(el.getName() + " (" + ver1 + ")");
+                                            } else {
                                                 if (!scanner.home.exists())
                                                     scanner.home.mkdirs();
                                                 el.add(evt, scanner);
