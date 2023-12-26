@@ -32,4 +32,14 @@ public class MCProfileScanner {
                 return true;
         return false;
     }
+
+    /**
+     * @since MinecraftSupport 0.2.4.1
+     */
+    public MinecraftContent.MinecraftContentVersion get(final MinecraftContent content) {
+        for (final MinecraftContent.MinecraftContentVersion ver : contents)
+            if (content.equals(ver.getContent()))
+                return ver;
+        return null;
+    }
 }
