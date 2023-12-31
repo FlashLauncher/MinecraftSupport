@@ -73,7 +73,7 @@ public class MCMetaVersion implements IMinecraftVersion {
                     final JsonDict os = r.getAsDict("os");
                     if (os.has("name") && !os.getAsString("name").equals(osn))
                         continue;
-                    if (os.has("version") && !Core.VERSION.isCompatibility(os.getAsString("version").replaceAll("\\.", ".")))
+                    if (os.has("version") && !Core.VERSION.isCompatibility(os.getAsString("version").replaceAll("\\\\\\.", ".")))
                         continue;
                 }
                 if (r.has("features")) {
