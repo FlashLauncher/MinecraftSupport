@@ -41,7 +41,7 @@ public class MCLaunch implements LaunchListener {
             return;
         }
         if (h) {
-            if (line.contains("LWJGL")) {
+            if (line.contains("LWJGL") || line.contains("[mixin/]: SpongePowered MIXIN Subsystem")) {
                 h = false;
                 configuration.setVisible(false);
             }
