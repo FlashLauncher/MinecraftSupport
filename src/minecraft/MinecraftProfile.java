@@ -37,6 +37,11 @@ public class MinecraftProfile implements IMinecraftProfile {
 
     public File homeDir = null;
 
+    /**
+     * @since MinecraftSupport 0.2.5
+     */
+    @Override public String getID() { return "minecraft-support.profile." + name; }
+
     @Override public String toString() { return name; }
     @Override public IImage getIcon() { return context.getIcon(); }
 

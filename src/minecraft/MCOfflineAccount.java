@@ -64,6 +64,11 @@ public class MCOfflineAccount implements IMinecraftAccount {
         editor.onClose(plugin::saveConfig);
     }
 
+    /**
+     * @since MinecraftSupport 0.2.5
+     */
+    @Override public String getID() { return "minecraft-support.offline." + uuid; }
+
     @Override public String toString() { return name; }
 
     @Override
