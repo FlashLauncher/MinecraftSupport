@@ -12,11 +12,13 @@ import Utils.json.JsonElement;
 import Utils.json.JsonList;
 import Utils.web.WebClient;
 import Utils.web.WebResponse;
+import Utils.web.sURL;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.net.URI;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -91,10 +93,10 @@ public class MCMetaVersion implements IMinecraftVersion {
         public final TaskGroup group;
         public final File dir, natives;
         public final String path, sha1;
-        public final URI uri;
+        public final sURL uri;
         public final JsonDict extract;
 
-        public LibraryTask(final TaskGroup group, final File dir, final String path, final String sha1, final URI uri, final File natives, final JsonDict extract) {
+        public LibraryTask(final TaskGroup group, final File dir, final String path, final String sha1, final sURL uri, final File natives, final JsonDict extract) {
             this.group = group;
             this.dir = dir;
             this.path = path;
@@ -224,23 +226,20 @@ public class MCMetaVersion implements IMinecraftVersion {
                 if (!nd.exists())
                     nd.mkdirs();
 
-                if (parent != null)
-                    try {
-                        parent.preLaunch();
-                    } catch (final Exception ex) {
-                        ex.printStackTrace();
-                    }
+                if (!vars.containsKey("launcher_name")) {
+                    vars.put("launcher_name", FlashLauncher.NAME);
+                    vars.put("launcher_version", FlashLauncher.VERSION.toString());
+                }
 
-                vars.put("launcher_name", FlashLauncher.NAME);
-                vars.put("launcher_version", FlashLauncher.VERSION.toString());
+                if (!vars.containsKey("version_name")) {
+                    vars.put("version_name", id);
+                    vars.put("version_type", dict.getAsString("type"));
+                }
 
-                vars.put("version_name", id);
-                vars.put("version_type", dict.getAsString("type"));
-
-                vars.put("game_directory", homeDir.getPath());
+                if (!vars.containsKey("game_directory"))
+                    vars.put("game_directory", homeDir.getPath());
 
                 final boolean hw1 = plugin.checkHashWeb.get(), hw2 = !hw1, hfs = plugin.checkHashFS.get();
-
                 final char s = Core.IS_WINDOWS ? ';' : ':';
 
                 final StringBuilder classpath;
@@ -250,6 +249,14 @@ public class MCMetaVersion implements IMinecraftVersion {
                 }
 
                 if (dict.has("libraries")) {
+                    final List<String> list;
+                    {
+                        final Object o = configuration.generalObjects.get("definedLibs");
+                        if (o instanceof List)
+                            list = (List<String>) o;
+                        else
+                            configuration.generalObjects.put("definedLibs", list = new ArrayList<>());
+                    }
                     final File libs = new File(gameDir, "libraries");
                     final TaskGroupAutoProgress sg = new TaskGroupAutoProgress(1);
                     for (final JsonElement e : dict.getAsList("libraries")) {
@@ -257,6 +264,22 @@ public class MCMetaVersion implements IMinecraftVersion {
                         String n = d.getAsString("name");
                         if (!isAllow(d))
                             continue;
+                        {
+                            final String[] sn = n.split(":");
+                            if (sn.length > 0) {
+                                final StringBuilder bn = new StringBuilder();
+                                bn.append(sn[0]);
+                                if (sn.length > 1) {
+                                    bn.append(':').append(sn[1]);
+                                    for (int i = 3; i < sn.length; i++)
+                                        bn.append(':').append(sn[i]);
+                                }
+                                final String ln = bn.toString();
+                                if (list.contains(ln))
+                                    continue;
+                                list.add(ln);
+                            }
+                        }
                         JsonElement te = d.get("downloads");
                         if (te != null && te.isDict()) {
                             final JsonDict dl = te.getAsDict();
@@ -267,7 +290,7 @@ public class MCMetaVersion implements IMinecraftVersion {
                                 final JsonElement u = a.get("url");
                                 if (u != null && u.isString() && !u.getAsString().isEmpty())
                                     sg.addTask(new LibraryTask(sg, libs, p,
-                                            hw1 && a.has("sha1") ? a.getAsString("sha1") : null, URI.create(a.getAsString("url")), null, null));
+                                            hw1 && a.has("sha1") ? a.getAsString("sha1") : null, new sURL(a.getAsString("url")), null, null));
                             }
                             JsonElement nm = d.get("natives");
                             if (nm != null && nm.isDict())
@@ -289,7 +312,7 @@ public class MCMetaVersion implements IMinecraftVersion {
                                     classpath.append(new File(libs, p).getAbsolutePath()).append(s);
                                     if (a.has("url"))
                                         sg.addTask(new LibraryTask(sg, libs, p,
-                                                hw1 && a.has("sha1") ? a.getAsString("sha1") : null, URI.create(a.getAsString("url")), nd, d.has("extract") ? d.getAsDict("extract") : null));
+                                                hw1 && a.has("sha1") ? a.getAsString("sha1") : null, new sURL(a.getAsString("url")), nd, d.has("extract") ? d.getAsDict("extract") : null));
                                 } catch (final Exception ex) {
                                     ex.printStackTrace();
                                 }
@@ -354,6 +377,15 @@ public class MCMetaVersion implements IMinecraftVersion {
                     configuration.addTaskGroup(sg);
                 }
 
+                vars.put("classpath", classpath.toString());
+
+                if (parent != null)
+                    try {
+                        parent.preLaunch();
+                    } catch (final Exception ex) {
+                        ex.printStackTrace();
+                    }
+
                 if (dict.has("downloads"))
                     try {
                         final JsonDict d = dict.getAsDict("downloads");
@@ -392,8 +424,6 @@ public class MCMetaVersion implements IMinecraftVersion {
                     } catch (final Exception ex) {
                         ex.printStackTrace();
                     }
-
-                vars.put("classpath", classpath.toString());
 
                 if (dict.has("assetIndex"))
                     try {
