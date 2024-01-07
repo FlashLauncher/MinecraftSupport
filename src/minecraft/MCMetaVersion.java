@@ -30,36 +30,53 @@ import java.util.zip.ZipInputStream;
 public class MCMetaVersion implements IMinecraftVersion {
     public final String id;
     public final List<String> tags;
-    private final JsonDict dict;
     public final File meta;
 
     public final MinecraftSupport plugin;
 
-    private final WebClient client = new WebClient();
+    private final WebClient client;
 
     public MCMetaVersion(final MinecraftSupport plugin, final String id, final File meta, final List<String> tags) {
         this.plugin = plugin;
         this.id = id;
         this.tags = tags;
         this.meta = meta.getAbsoluteFile();
-        this.dict = null;
-        client.allowRedirect = true;
-        client.headers.put("User-Agent", "FlashLauncher/MinecraftSupport/indev (mcflashlauncher@gmail.com)");
+        client = plugin.market.client;
     }
 
     public MCMetaVersion(final MinecraftSupport plugin, final String id, final File meta, final String... tags) { this(plugin, id, meta, Arrays.asList(tags)); }
 
+    /**
+     * @since MinecraftSupport 0.2.6
+     */
+    public MCMetaVersion(final MinecraftSupport plugin, final String id, final List<String> tags) {
+        this.plugin = plugin;
+        this.id = id;
+        this.tags = tags;
+        this.meta = null;
+        client = plugin.market.client;
+    }
+
+    /**
+     * @since MinecraftSupport 0.2.6
+     */
+    public MCMetaVersion(final MinecraftSupport plugin, final String id, final String... tags) { this(plugin, id, Arrays.asList(tags)); }
+
+    /**
+     * @deprecated MinecraftSupport 0.2.6
+     */
     public MCMetaVersion(final MinecraftSupport plugin, final String id, final JsonDict dict, final List<String> tags) {
         this.plugin = plugin;
         this.id = id;
         this.tags = tags;
         this.meta = null;
-        this.dict = dict;
-        client.allowRedirect = true;
-        client.headers.put("User-Agent", "FlashLauncher/MinecraftSupport/indev (mcflashlauncher@gmail.com)");
+        client = plugin.market.client;
     }
 
-    public MCMetaVersion(final MinecraftSupport plugin, final String id, final JsonDict dict, final String... tags) { this(plugin, id, dict, Arrays.asList(tags)); }
+    /**
+     * @deprecated MinecraftSupport 0.2.6
+     */
+    public MCMetaVersion(final MinecraftSupport plugin, final String id, final JsonDict dict, final String... tags) { this(plugin, id, Arrays.asList(tags)); }
 
     @Override public String getID() { return id; }
     @Override public String toString() { return id; }
@@ -79,7 +96,7 @@ public class MCMetaVersion implements IMinecraftVersion {
                         continue;
                 }
                 if (r.has("features")) {
-                    System.out.println("Features: " + r.getAsDict("features"));
+                    System.out.println("[MinecraftSupport] Unknown features: " + r.getAsDict("features"));
                     continue;
                 }
                 allow = r.getAsString("action").equals("allow");
@@ -89,29 +106,22 @@ public class MCMetaVersion implements IMinecraftVersion {
         return true;
     }
 
-    class LibraryTask extends Task {
+    private class LibraryTask extends Task {
         public final TaskGroup group;
-        public final File dir, natives;
+        public final File dir;
         public final String path, sha1;
         public final sURL uri;
-        public final JsonDict extract;
 
-        public LibraryTask(final TaskGroup group, final File dir, final String path, final String sha1, final sURL uri, final File natives, final JsonDict extract) {
+        public LibraryTask(final TaskGroup group, final File dir, final String path, final String sha1, final sURL uri) {
             this.group = group;
             this.dir = dir;
             this.path = path;
             this.sha1 = sha1;
             this.uri = uri;
-            this.natives = natives;
-            this.extract = extract;
-            if (extract != null)
-                setMaxProgress(2);
         }
 
-        boolean dl = true;
-
         @Override
-        public void run() throws Throwable {
+        public void run() {
             final File f = new File(dir, path), p = f.getParentFile();
             try {
                 if (!p.exists())
@@ -129,19 +139,52 @@ public class MCMetaVersion implements IMinecraftVersion {
                             break;
                         }
                     }
-                if (extract == null)
+            } catch (final Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "Downloading lib ... (" + group.getProgress() + "/" + group.getMaxProgress() + ") - " + path;
+        }
+    }
+
+    private static class NativeUnpackTask extends Task {
+        public final TaskGroup group;
+        public final Task task;
+        public final File dir;
+        public final String path;
+        public final File natives;
+        public final JsonDict extract;
+
+        public NativeUnpackTask(final TaskGroup group, final Task task, final File dir, final String path, final File natives, final JsonDict extract) {
+            this.group = group;
+            this.task = task;
+            this.dir = dir;
+            this.path = path;
+            this.natives = natives;
+            this.extract = extract;
+        }
+
+        @Override
+        public void run() throws Throwable {
+            if (task != null)
+                task.waitFinish();
+            final File f = new File(dir, path);
+            try {
+                if (!f.exists())
                     return;
-                dl = false;
-                addProgress(1);
-                final JsonList exclude = extract.has("exclude") ? extract.getAsList("exclude") : null;
+                final JsonList exclude = extract != null && extract.has("exclude") ? extract.getAsList("exclude") : null;
                 try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(f.toPath()))) {
                     m:
                     for (ZipEntry e = zis.getNextEntry(); e != null; e = zis.getNextEntry()) {
                         if (e.getName().endsWith("/"))
                             continue;
-                        for (final JsonElement el : exclude)
-                            if (el.isString() && e.getName().startsWith(el.getAsString()))
-                                continue m;
+                        if (exclude != null)
+                            for (final JsonElement el : exclude)
+                                if (el.isString() && e.getName().startsWith(el.getAsString()))
+                                    continue m;
                         File nf = new File(natives, e.getName());
                         if (!nf.exists()) {
                             final File d = nf.getParentFile();
@@ -159,7 +202,7 @@ public class MCMetaVersion implements IMinecraftVersion {
 
         @Override
         public String toString() {
-            return dl ? "Downloading lib ... (" + group.getProgress() + "/" + group.getMaxProgress() + ") - " + path : "Unpacking lib ... (" + group.getProgress() + "/" + group.getMaxProgress() + ") - " + path;
+            return "Unpacking lib ... (" + group.getProgress() + "/" + group.getMaxProgress() + ") - " + path;
         }
     }
 
@@ -176,7 +219,7 @@ public class MCMetaVersion implements IMinecraftVersion {
         return new LaunchListener() {
             LaunchListener parent = null;
             JsonDict dict = null;
-            File gameDir, homeDir = configuration.workDir;
+            final File gameDir, homeDir = configuration.workDir;
             final ListMap<String, String> vars;
 
             @Override
@@ -259,7 +302,7 @@ public class MCMetaVersion implements IMinecraftVersion {
                     }
                     final File libs = new File(gameDir, "libraries");
                     final TaskGroupAutoProgress sg = new TaskGroupAutoProgress(1);
-                    for (final JsonElement e : dict.getAsList("libraries")) {
+                    for (final JsonElement e : Core.asReversed(dict.getAsList("libraries"))) {
                         final JsonDict d = e.getAsDict();
                         String n = d.getAsString("name");
                         if (!isAllow(d))
@@ -289,8 +332,7 @@ public class MCMetaVersion implements IMinecraftVersion {
                                 classpath.append(new File(libs, p).getAbsolutePath()).append(s);
                                 final JsonElement u = a.get("url");
                                 if (u != null && u.isString() && !u.getAsString().isEmpty())
-                                    sg.addTask(new LibraryTask(sg, libs, p,
-                                            hw1 && a.has("sha1") ? a.getAsString("sha1") : null, new sURL(a.getAsString("url")), null, null));
+                                    sg.addTask(new LibraryTask(sg, libs, p, hw1 && a.has("sha1") ? a.getAsString("sha1") : null, new sURL(a.getAsString("url"))));
                             }
                             JsonElement nm = d.get("natives");
                             if (nm != null && nm.isDict())
@@ -310,9 +352,11 @@ public class MCMetaVersion implements IMinecraftVersion {
                                     final JsonDict a = e2.getAsDict();
                                     final String p = a.has("path") ? a.getAsString("path") : getPathByName(n);
                                     classpath.append(new File(libs, p).getAbsolutePath()).append(s);
+                                    Task dt = null;
                                     if (a.has("url"))
-                                        sg.addTask(new LibraryTask(sg, libs, p,
-                                                hw1 && a.has("sha1") ? a.getAsString("sha1") : null, new sURL(a.getAsString("url")), nd, d.has("extract") ? d.getAsDict("extract") : null));
+                                        sg.addTask(dt = new LibraryTask(sg, libs, p,
+                                                hw1 && a.has("sha1") ? a.getAsString("sha1") : null, new sURL(a.getAsString("url"))));
+                                    sg.addTask(new NativeUnpackTask(sg, dt, libs, p, nd, d.has("extract") ? d.getAsDict("extract") : null));
                                 } catch (final Exception ex) {
                                     ex.printStackTrace();
                                 }
@@ -433,7 +477,7 @@ public class MCMetaVersion implements IMinecraftVersion {
                         vars.put("assets_index_name", id);
                         g.addTask(new Task() {
                             @Override
-                            public void run() throws Throwable {
+                            public void run() {
                                 try {
                                     final File aid = new File(gameDir, "assets/indexes"), aim = new File(aid, id + ".json");
                                     final URI uri = URI.create(a.getAsString("url"));
@@ -569,7 +613,7 @@ public class MCMetaVersion implements IMinecraftVersion {
                 for (final Map.Entry<String, String> e : vars.entrySet())
                     arg = arg.replaceAll("\\$\\{" + e.getKey() + "}", Matcher.quoteReplacement(e.getValue()));
                 if (arg.contains("${"))
-                    System.out.println("Unknown var in the argument: " + arg);
+                    System.out.println("[MinecraftSupport] Unknown the variable's name in arguments: " + arg);
                 return arg;
             }
 
@@ -588,12 +632,12 @@ public class MCMetaVersion implements IMinecraftVersion {
                                     if (sse.isString())
                                         list.add(patch(sse.getAsString()));
                                     else
-                                        System.out.println("I don't understand in the list of arguments: " + sse);
+                                        System.out.println("[MinecraftSupport] I don't understand in the list of arguments: " + sse);
                             else
-                                System.out.println("I don't understand value: " + se);
+                                System.out.println("[MinecraftSupport] I don't understand the value: " + se);
                         }
                     } else
-                        System.out.println("I can't parse the argument: " + e);
+                        System.out.println("[MinecraftSupport] I can't parse the argument: " + e);
             }
 
             {
