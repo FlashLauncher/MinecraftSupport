@@ -2,9 +2,10 @@ package minecraft;
 
 import Launcher.*;
 import Launcher.base.*;
-import UIL.Lang;
-import UIL.LangItem;
+import UIL.*;
 import UIL.base.IImage;
+import UIL.base.IText;
+import UIL.base.ITextField;
 import Utils.*;
 import Utils.json.Json;
 import Utils.json.JsonDict;
@@ -36,12 +37,16 @@ public class MinecraftSupport extends Plugin {
     public final MCAssetManager assetManager;
     public final LangItem
                 PROFILE_MAKER = Lang.get(ID + ".maker.profile"),
-                OFFLINE_ACCOUNT_MAKER = Lang.get(ID + ".maker.offline-account")
+                OFFLINE_ACCOUNT_MAKER = Lang.get(ID + ".maker.offline-account"),
+                GAME_DIR = Lang.get(ID + ".game-dir.name"),
+                HOME_DIR = Lang.get(ID + ".home-dir.name"),
+                GAME_DIR_DESC = Lang.get(ID + ".game-dir.desc"),
+                HOME_DIR_DESC = Lang.get(ID + ".home-dir.desc")
     ;
 
     final MinecraftList lv = new MinecraftList(Lang.get("minecraft.groups.name"), getIcon());
 
-    final Object cl = new Object();
+    final Object cl = new Object(), pn = new Object();
     final ArrayList<MinecraftContent> cll = new ArrayList<>();
 
     public final AtomicBoolean
@@ -140,9 +145,7 @@ public class MinecraftSupport extends Plugin {
                     final File m = new File(f, f.getName() + ".json");
                     if (!m.exists() || !m.isFile())
                         continue;
-                    final MCMetaVersion meta = new MCMetaVersion(this, f.getName(), m);
-                    installed.add(meta);
-                    all.add(meta);
+                    installed.add(new MCMetaVersion(this, f.getName(), m));
                 }
         } catch (final Exception ex) {
             ex.printStackTrace();
@@ -181,7 +184,7 @@ public class MinecraftSupport extends Plugin {
                             d.remove("javaDir");
 
                             if (gd != null && !gd.isEmpty())
-                                p.homeDir = FS.resolve(FLCore.LAUNCHER_DIR, gd);
+                                p.homeDir = FS.resolve(gameDir, gd);
 
                             if (jp == null || jp.isEmpty())
                                 for (final Java java : javaSupport.javaList) {
@@ -189,7 +192,7 @@ public class MinecraftSupport extends Plugin {
                                     break;
                                 }
                             else {
-                                final File j = FS.resolve(FLCore.LAUNCHER_DIR, jp);
+                                final File j = FS.resolve(gameDir, jp);
                                 for (final Java java : javaSupport.javaList)
                                     if (java.file.equals(j)) {
                                         p.java = java;
@@ -227,7 +230,7 @@ public class MinecraftSupport extends Plugin {
                     if (p instanceof MinecraftProfile) {
                         final MinecraftProfile mp = (MinecraftProfile) p;
                         if (mp.data == null) {
-                            System.out.println("MinecraftProfile data is null!");
+                            System.out.println("[MinecraftSupport] MinecraftProfile data is null!");
                             mp.data = new JsonDict();
                         }
                         final JsonDict d = mp.data;
@@ -253,14 +256,14 @@ public class MinecraftSupport extends Plugin {
                         final File home = mp.homeDir;
 
                         if (home != null)
-                            d.put("gameDir", FS.relative(FLCore.LAUNCHER_DIR, home));
+                            d.put("gameDir", FS.relative(homeDir, home));
                         else
                             d.remove("gameDir");
 
                         final Java j = mp.java;
 
                         if (j != null)
-                            d.put("javaDir" + PLATFORM, FS.relative(FLCore.LAUNCHER_DIR, mp.java.file.getAbsoluteFile()));
+                            d.put("javaDir" + PLATFORM, FS.relative(gameDir, mp.java.file.getAbsoluteFile()));
                         else
                             d.remove("javaDir" + PLATFORM);
                         pm.put(p.toString(), d);
@@ -298,9 +301,8 @@ public class MinecraftSupport extends Plugin {
 
         loadConfig();
 
-        all = new MinecraftList(Lang.get("minecraft.groups.all"), context.getIcon());
         installed = new MinecraftList(Lang.get("markets.installed.name"), MCOfflineAccount.ICON_OFFLINE);
-        addList(all, installed);
+        addList(all = new MinecraftList(Lang.get("minecraft.groups.all"), context.getIcon()));
 
         addProfileMaker(new IMaker<IProfile>() {
             @Override public String toString() { return PROFILE_MAKER.toString(); }
@@ -329,8 +331,6 @@ public class MinecraftSupport extends Plugin {
             }
         });
 
-        scanDir();
-
         /*addAccountMaker(new IMaker<IAccount>() {
             @Override
             public String toString() {
@@ -355,6 +355,78 @@ public class MinecraftSupport extends Plugin {
 
         addMarket(assetManager = new MCAssetManager(this, context.getIcon()));
         addMarket(market = new MinecraftMarket(context, "minecraft-support.market", context.getIcon()));
+
+        scanDir();
+
+        addSettingsItem(new FLMenuItemListener(ID + ".settings", getIcon(), "Minecraft") {
+            @Override
+            public void onOpen(final FLMenuItemEvent event) {
+                final ITextField
+                        gpf = UI.textField().size(event.width() - 16, 32).pos(8, 34),
+                        hpf = UI.textField().size(event.width() - 16, 32).pos(8, 126);
+                final IText
+                        gpt = UI.text().size(event.width() - 32, 18).pos(16, 74).ha(HAlign.LEFT).foreground(Theme.AUTHOR_FOREGROUND_COLOR),
+                        hpt = UI.text().size(event.width() - 32, 18).pos(16, 166).ha(HAlign.LEFT).foreground(Theme.AUTHOR_FOREGROUND_COLOR);
+                event.add(gpf, hpf, gpt, hpt,
+                        UI.text(GAME_DIR).size(event.width() - 16, 18).pos(8, 8),
+                        UI.button("...").size(32, 32).pos(event.width() - 40, 34).onAction((s, e) -> {
+                            final FLFSChooser c = new FLFSChooser(event.launcher, "Game Dir Selector");
+                            c.setPath(gameDir);
+                            if (c.start()) {
+                                if (c.getSelected().length == 0)
+                                    return;
+                                final File f = c.getSelected()[0];
+                                saveProfiles();
+                                if (homeDir.equals(new File(gameDir, "home")))
+                                    homeDir = new File(f, "home");
+                                gameDir = f;
+                                installed.clear();
+                                for (final IProfile p : getProfiles())
+                                    removeProfile(p);
+                                saveConfig();
+                                scanDir();
+                                synchronized (pn) { pn.notifyAll(); }
+                            }
+                        }).background(UI.TRANSPARENT),
+                        UI.text(HOME_DIR).size(event.width() - 16, 18).pos(8, 100),
+                        UI.button("...").size(32, 32).pos(event.width() - 40, 126).onAction((s, e) -> {
+                            final FLFSChooser c = new FLFSChooser(event.launcher, "Home Dir Selector");
+                            c.setPath(gameDir);
+                            if (c.start()) {
+                                if (c.getSelected().length == 0)
+                                    return;
+                                saveProfiles();
+                                homeDir = c.getSelected()[0];
+                                installed.clear();
+                                for (final IProfile p : getProfiles())
+                                    removeProfile(p);
+                                saveConfig();
+                                scanDir();
+                                synchronized (pn) { pn.notifyAll(); }
+                            }
+                        }).background(UI.TRANSPARENT)
+                );
+                final Runnable r = Core.onNotifyLoop(pn, () -> {
+                    gpf.text(gameDir).update();
+                    hpf.text(homeDir).update();
+                    gpt.text(FS.relative(FLCore.LAUNCHER_DIR, gameDir)).update();
+                    hpt.text(FS.relative(FLCore.LAUNCHER_DIR, homeDir)).update();
+                });
+                event.onClose(() -> Core.offNotifyLoop(r));
+            }
+        });
+
+        addHelpItem(new FLMenuItemListener(ID + ".support", getIcon(), "Minecraft") {
+            @Override
+            public void onOpen(final FLMenuItemEvent event) {
+                event.add(
+                        UI.text(GAME_DIR).size(event.width() - 16, 18).pos(8, 8).ha(HAlign.LEFT),
+                        UI.text(GAME_DIR_DESC).size(event.width() - 32, 18).pos(16, 34).ha(HAlign.LEFT).foreground(Theme.AUTHOR_FOREGROUND_COLOR),
+                        UI.text(HOME_DIR).size(event.width() - 16, 18).pos(8, 68).ha(HAlign.LEFT),
+                        UI.text(HOME_DIR_DESC).size(event.width() - 32, 54).pos(16, 94).ha(HAlign.LEFT).foreground(Theme.AUTHOR_FOREGROUND_COLOR)
+                );
+            }
+        });
     }
 
     public boolean addScanListener(final Runnable1a<MCProfileScanner> listener) { return listeners.add(listener); }
@@ -367,7 +439,10 @@ public class MinecraftSupport extends Plugin {
     public void addList(final MinecraftList... lists) { lv.addAll(Arrays.asList(lists)); }
     public void removeList(final Collection<? extends IMinecraftVersion> lists) { lv.removeAll(lists); }
     public void removeList(final IMinecraftVersion... lists) { lv.removeAll(Arrays.asList(lists)); }
-    public IMinecraftVersion getVersion(final String id) { return lv.get(id); }
+    public IMinecraftVersion getVersion(final String id) {
+        final IMinecraftVersion ver = lv.get(id);
+        return ver == null ? installed.get(id) : ver;
+    }
 
     public void addContent(final MinecraftContent content) {
         synchronized (cl) {
