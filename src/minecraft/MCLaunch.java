@@ -37,7 +37,7 @@ public class MCLaunch implements LaunchListener {
     @Override
     public void outLine(final String line) {
         if (line.contains("Session ID is")) {
-            System.out.println("[plugin] Session ID was hidden.");
+            System.out.println("[MinecraftSupport] Session ID was hidden.");
             return;
         }
         if (h) {
@@ -54,10 +54,7 @@ public class MCLaunch implements LaunchListener {
         System.out.println("[GAME/out] " + line);
     }
 
-    @Override
-    public void errLine(final String line) {
-        System.out.println("[GAME/err] " + line);
-    }
+    @Override public void errLine(final String line) { System.out.println("[GAME/err] " + line); }
 
     public MCLaunch(final MinecraftProfile profile, final RunProc configuration, final IMinecraftVersion ver) {
         this.profile = profile;

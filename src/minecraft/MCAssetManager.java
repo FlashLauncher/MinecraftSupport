@@ -78,20 +78,20 @@ public class MCAssetManager extends Market {
                         Files.createSymbolicLink(dir2.toPath(), dir.toPath());
                         linked = true;
                     } catch (final UnsupportedOperationException ex) {
-                        System.out.println("This OS doesn't support creating Sym links");
+                        System.out.println("[MinecraftSupport] This OS doesn't support creating Sym links");
                     } catch (final FileSystemException ex) {
                         if (ex instanceof AccessDeniedException)
-                            System.out.println("I don't have permissions to create Sym link");
+                            System.out.println("[MinecraftSupport] I don't have permissions to create Sym link");
                         ex.printStackTrace();
                     }
                     if (!linked)
                         try {
                             Files.createLink(dir2.toPath(), dir.toPath());
                         } catch (final UnsupportedOperationException ex) {
-                            System.out.println("This OS doesn't support creating links");
+                            System.out.println("[MinecraftSupport] This OS doesn't support creating links");
                         } catch (final FileSystemException ex) {
                             if (ex instanceof AccessDeniedException)
-                                System.out.println("I don't have permissions to create link");
+                                System.out.println("[MinecraftSupport] I don't have permissions to create link");
                             else
                                 ex.printStackTrace();
                         }
