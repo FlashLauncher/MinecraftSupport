@@ -68,7 +68,7 @@ public class MinecraftList implements IMinecraftVersion, Iterable<IMinecraftVers
     }
 
     /**
-     * @since MinecraftSupport 0.2.5.1
+     * @since MinecraftSupport 0.2.6
      */
     public boolean remove(final String id) {
         synchronized (this) {
@@ -90,7 +90,17 @@ public class MinecraftList implements IMinecraftVersion, Iterable<IMinecraftVers
     }
 
     /**
-     * @since MinecraftSupport 0.2.5.1
+     * @since MinecraftSupport 0.2.6
+     */
+    public void clear() {
+        synchronized (this) {
+            vl.clear();
+            notifyAll();
+        }
+    }
+
+    /**
+     * @since MinecraftSupport 0.2.6
      */
     public boolean has(final String id) {
         synchronized (this) {
@@ -111,7 +121,7 @@ public class MinecraftList implements IMinecraftVersion, Iterable<IMinecraftVers
     @Override public final LaunchListener init(final RunProc configuration) { return null; }
 
     /**
-     * @since MinecraftSupport 0.2.5.1
+     * @since MinecraftSupport 0.2.6
      */
     public void onSelect(final IMinecraftVersion version) {}
 }
