@@ -32,7 +32,7 @@ public class MinecraftMarket extends Market {
 
     private boolean success = false;
     private TaskGroup group = new TaskGroupAutoProgress();
-    public final MinecraftList all, versions;
+    public final MinecraftList all, versions, installed;
 
     public final ConcurrentHashMap<String, MinecraftList> types = new ConcurrentHashMap<>();
 
@@ -40,7 +40,8 @@ public class MinecraftMarket extends Market {
         super(id, icon);
         this.context = context;
         plugin = (MinecraftSupport) context.getPlugin();
-        all = ((MinecraftSupport) context.getPlugin()).all;
+        all = plugin.all;
+        installed = plugin.installed;
         versions = new MinecraftList(Lang.get("minecraft.groups.vanilla"), context.getIcon());
         final MinecraftList sl = new MinecraftList(Lang.get("minecraft.groups.vanilla-snapshot"), context.getIcon());
         types.put("snapshot", sl);
@@ -74,6 +75,8 @@ public class MinecraftMarket extends Market {
                         final WebVersion ver = new WebVersion(plugin, client, i.getAsString("id"), i.getAsString("sha1"), url,
                                 type.isEmpty() ? null : Arrays.asList(type));
                         all.add(ver);
+                        if (installed.remove(ver.id))
+                            installed.add(ver);
                         versions.add(ver);
                         if (type.isEmpty())
                             continue;
