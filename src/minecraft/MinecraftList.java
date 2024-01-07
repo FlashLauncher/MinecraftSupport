@@ -67,10 +67,37 @@ public class MinecraftList implements IMinecraftVersion, Iterable<IMinecraftVers
         }
     }
 
+    /**
+     * @since MinecraftSupport 0.2.5.1
+     */
+    public boolean remove(final String id) {
+        synchronized (this) {
+            for (final IMinecraftVersion version : vl)
+                if (version.getID().equals(id)) {
+                    vl.remove(version);
+                    notifyAll();
+                    return true;
+                }
+            return false;
+        }
+    }
+
     public void removeAll(final Collection<? extends IMinecraftVersion> versions) {
         synchronized (this) {
             vl.removeAll(versions);
             notifyAll();
+        }
+    }
+
+    /**
+     * @since MinecraftSupport 0.2.5.1
+     */
+    public boolean has(final String id) {
+        synchronized (this) {
+            for (final IMinecraftVersion version : vl)
+                if (version.getID().equals(id))
+                    return true;
+            return false;
         }
     }
 
@@ -82,4 +109,9 @@ public class MinecraftList implements IMinecraftVersion, Iterable<IMinecraftVers
     @Override public String getID() { return ""; }
 
     @Override public final LaunchListener init(final RunProc configuration) { return null; }
+
+    /**
+     * @since MinecraftSupport 0.2.5.1
+     */
+    public void onSelect(final IMinecraftVersion version) {}
 }
