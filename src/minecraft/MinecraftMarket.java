@@ -8,24 +8,19 @@ import Utils.json.JsonDict;
 import Utils.json.JsonElement;
 import Utils.web.WebClient;
 import Utils.web.WebResponse;
+import Utils.web.sURL;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MinecraftMarket extends Market {
-    public static final WebClient client = new WebClient();
-
-    static {
-        client.allowRedirect = true;
-        client.headers.put("User-Agent", "FlashLauncher/MinecraftSupport/0.2.2 (mcflashlauncher@gmail.com)");
-    }
+    public final WebClient client = new WebClient();
 
     public final PluginContext context;
     public final MinecraftSupport plugin;
@@ -38,6 +33,8 @@ public class MinecraftMarket extends Market {
 
     public MinecraftMarket(final PluginContext context, final String id, final IImage icon) {
         super(id, icon);
+        client.allowRedirect = true;
+        client.headers.put("User-Agent", "FlashLauncher/MinecraftSupport/" + context.getVersion() + " (mcflashlauncher@gmail.com)");
         this.context = context;
         plugin = (MinecraftSupport) context.getPlugin();
         all = plugin.all;
@@ -55,7 +52,7 @@ public class MinecraftMarket extends Market {
             public void run() {
                 try {
                     final ByteArrayOutputStream os = new ByteArrayOutputStream();
-                    final WebResponse r = client.open("GET", new URI("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"), os, true);
+                    final WebResponse r = client.open("GET", new sURL("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"), os, true);
                     r.auto();
                     if (r.getResponseCode() != WebResponse.OK)
                         return;
@@ -73,7 +70,7 @@ public class MinecraftMarket extends Market {
                         }
                         final String type = i.getAsStringOrDefault("type", "");
                         final WebVersion ver = new WebVersion(plugin, client, i.getAsString("id"), i.getAsString("sha1"), url,
-                                type.isEmpty() ? null : Arrays.asList(type));
+                                type.isEmpty() ? null : Collections.singletonList(type));
                         all.add(ver);
                         if (installed.remove(ver.id))
                             installed.add(ver);
