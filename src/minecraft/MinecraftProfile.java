@@ -134,6 +134,10 @@ public class MinecraftProfile implements IMinecraftProfile {
                                 Core.offNotifyLoop(r);
                                 r = Core.onNotifyLoop(list, () -> {
                                     clb.focus().clear();
+                                    if (back == null) {
+                                        final MinecraftList l = plugin.installed;
+                                        clb.add(UI.button().text(l).image(l.icon).imageAlign(ImgAlign.TOP).imageOffset(20).smooth(l.smooth).onAction((s, e) -> list(l, b)));
+                                    }
                                     for (final IMinecraftVersion ver : list) {
                                         if (ver instanceof MinecraftList) {
                                             final MinecraftList l = (MinecraftList) ver;
