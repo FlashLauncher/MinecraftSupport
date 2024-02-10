@@ -7,6 +7,7 @@ import Launcher.base.LaunchListener;
 import Utils.Core;
 import Utils.web.WebClient;
 import Utils.web.WebResponse;
+import Utils.web.sURL;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -20,7 +21,11 @@ public class WebVersion implements IMinecraftVersion {
     public final String id;
 
     public final String sha1;
-    public final URL url;
+
+    /**
+     * @since MinecraftSupport 0.2.6.3
+     */
+    public final sURL url;
 
     public final List<String> tags;
 
@@ -31,6 +36,29 @@ public class WebVersion implements IMinecraftVersion {
 
             final String sha1,
             final URL url,
+
+            final List<String> tags
+    ) {
+        this.plugin = plugin;
+        this.client = client;
+        this.id = id;
+
+        this.sha1 = sha1;
+        this.url = new sURL(url);
+
+        this.tags = tags;
+    }
+
+    /**
+     * @since MinecraftSupport 0.2.6.3
+     */
+    public WebVersion(
+            final MinecraftSupport plugin,
+            final WebClient client,
+            final String id,
+
+            final String sha1,
+            final sURL url,
 
             final List<String> tags
     ) {
