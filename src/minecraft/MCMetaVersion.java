@@ -284,6 +284,8 @@ public class MCMetaVersion implements IMinecraftVersion {
 
                 final boolean hw1 = plugin.checkHashWeb.get(), hw2 = !hw1, hfs = plugin.checkHashFS.get();
                 final char s = Core.IS_WINDOWS ? ';' : ':';
+                if (!vars.containsKey("classpath_separator"))
+                    vars.put("classpath_separator", Character.toString(s));
 
                 final StringBuilder classpath;
                 {
@@ -301,6 +303,8 @@ public class MCMetaVersion implements IMinecraftVersion {
                             configuration.generalObjects.put("definedLibs", list = new ArrayList<>());
                     }
                     final File libs = new File(gameDir, "libraries");
+                    if (!vars.containsKey("library_directory"))
+                        vars.put("library_directory", libs.getAbsolutePath());
                     final TaskGroupAutoProgress sg = new TaskGroupAutoProgress(1);
                     for (final JsonElement e : Core.asReversed(dict.getAsList("libraries"))) {
                         final JsonDict d = e.getAsDict();
