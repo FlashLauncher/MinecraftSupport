@@ -16,7 +16,6 @@ import Utils.web.sURL;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.net.URI;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -110,14 +109,18 @@ public class MCMetaVersion implements IMinecraftVersion {
         public final TaskGroup group;
         public final File dir;
         public final String path, sha1;
-        public final sURL uri;
 
-        public LibraryTask(final TaskGroup group, final File dir, final String path, final String sha1, final sURL uri) {
+        /**
+         * @since MinecraftSupport 0.2.6.3
+         */
+        public final sURL url;
+
+        public LibraryTask(final TaskGroup group, final File dir, final String path, final String sha1, final sURL url) {
             this.group = group;
             this.dir = dir;
             this.path = path;
             this.sha1 = sha1;
-            this.uri = uri;
+            this.url = url;
         }
 
         @Override
@@ -129,7 +132,7 @@ public class MCMetaVersion implements IMinecraftVersion {
                 if (!f.exists() || sha1 != null && !Core.hashToHex("sha1", Files.readAllBytes(f.toPath())).equals(sha1))
                     while (true) {
                         final ByteArrayOutputStream os = new ByteArrayOutputStream();
-                        final WebResponse r = client.open("GET", uri, os, true);
+                        final WebResponse r = client.open("GET", url, os, true);
                         r.auto();
                         if (r.getResponseCode() != 200)
                             continue;
@@ -221,6 +224,8 @@ public class MCMetaVersion implements IMinecraftVersion {
             JsonDict dict = null;
             final File gameDir, homeDir = configuration.workDir;
             final ListMap<String, String> vars;
+
+            final boolean isFirst;
 
             @Override
             public void preLaunch() {
@@ -384,12 +389,12 @@ public class MCMetaVersion implements IMinecraftVersion {
                                                         ByteArrayOutputStream os = new ByteArrayOutputStream();
                                                         final String sha1;
                                                         if (hw1) {
-                                                            client.open("GET", URI.create(u + ".sha1"), os, true).auto();
+                                                            client.open("GET", new sURL(u + ".sha1"), os, true).auto();
                                                             sha1 = os.toString();
                                                             os = new ByteArrayOutputStream();
                                                         } else
                                                             sha1 = null;
-                                                        final WebResponse r = client.open("GET", URI.create(u), os, true);
+                                                        final WebResponse r = client.open("GET", new sURL(u), os, true);
                                                         r.auto();
                                                         switch (r.getResponseCode()) {
                                                             case 404:
@@ -436,38 +441,14 @@ public class MCMetaVersion implements IMinecraftVersion {
 
                 if (dict.has("downloads"))
                     try {
-                        final JsonDict d = dict.getAsDict("downloads");
-                        if (d.has("client")) {
-                            final JsonDict cd = d.getAsDict("client");
-                            final URI uri = URI.create(cd.getAsString("url"));
+                        JsonDict cd = dict.getAsDict("downloads");
+                        if (cd.has("client") && (cd = cd.getAsDict("client")).has("url")) {
+                            configuration.generalObjects.put("clientUrl", cd.getAsString("url"));
                             final String sha1 = cd.getAsString("sha1");
-                            final File f = new File(vd, id + ".jar");
-                            configuration.generalObjects.put("clientJar", f.toPath());
-                            g.addTask(new Task() {
-                                @Override
-                                public void run() throws Throwable {
-                                    if (!f.exists() || sha1 != null && !Core.hashToHex("sha1", Files.readAllBytes(f.toPath())).equals(sha1))
-                                        m1:
-                                        while (true) {
-                                            final ByteArrayOutputStream os = new ByteArrayOutputStream();
-                                            final WebResponse r = client.open("GET", uri, os, true);
-                                            r.auto();
-                                            switch (r.getResponseCode()) {
-                                                case 404:
-                                                    break m1;
-                                                case 200:
-                                                    break;
-                                                default:
-                                                    continue;
-                                            }
-                                            final byte[] data = os.toByteArray();
-                                            if (sha1 == null || Core.hashToHex("sha1", data).equals(sha1)) {
-                                                Files.write(f.toPath(), data);
-                                                break;
-                                            }
-                                        }
-                                }
-                            });
+                            if (sha1 == null)
+                                configuration.generalObjects.remove("clientSHA1");
+                            else
+                                configuration.generalObjects.put("clientSHA1", sha1);
                         }
                     } catch (final Exception ex) {
                         ex.printStackTrace();
@@ -484,7 +465,7 @@ public class MCMetaVersion implements IMinecraftVersion {
                             public void run() {
                                 try {
                                     final File aid = new File(gameDir, "assets/indexes"), aim = new File(aid, id + ".json");
-                                    final URI uri = URI.create(a.getAsString("url"));
+                                    final sURL uri = new sURL(a.getAsString("url"));
                                     if (!aid.exists())
                                         aid.mkdirs();
                                     final WebClient c = plugin.assetManager.client;
@@ -518,6 +499,41 @@ public class MCMetaVersion implements IMinecraftVersion {
                         ex.printStackTrace();
                     }
 
+                if (isFirst && configuration.generalObjects.containsKey("clientUrl")) {
+                    final sURL uri = new sURL((String) configuration.generalObjects.get("clientUrl"));
+                    final String sha1 = configuration.generalObjects.containsKey("clientSHA1") ? (String) configuration.generalObjects.get("clientSHA1") : null;
+                    configuration.generalObjects.remove("clientUrl");
+                    configuration.generalObjects.remove("clientSHA1");
+                    final File f = new File(gameDir, "versions/" + id + ".jar");
+                    configuration.generalObjects.put("clientJar", f.getAbsolutePath());
+                    g.addTask(new Task() {
+                        @Override
+                        public void run() throws Throwable {
+                            if (!f.exists() || (plugin.checkHashFS.get() && sha1 != null && !Core.hashToHex("sha1", Files.readAllBytes(f.toPath())).equals(sha1))) {
+                                m1:
+                                while (true) {
+                                    final ByteArrayOutputStream os = new ByteArrayOutputStream();
+                                    final WebResponse r = client.open("GET", uri, os, true);
+                                    r.auto();
+                                    switch (r.getResponseCode()) {
+                                        case 404:
+                                            break m1;
+                                        case 200:
+                                            break;
+                                        default:
+                                            continue;
+                                    }
+                                    final byte[] data = os.toByteArray();
+                                    if (sha1 == null || Core.hashToHex("sha1", data).equals(sha1)) {
+                                        Files.write(f.toPath(), data);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
                 if (add)
                     configuration.addTaskGroup(g);
             }
@@ -526,6 +542,7 @@ public class MCMetaVersion implements IMinecraftVersion {
             public void launch() {
                 if (parent != null)
                     parent.launch();
+
                 JsonDict args = null;
                 if (dict.has("arguments"))
                     try {
@@ -645,6 +662,9 @@ public class MCMetaVersion implements IMinecraftVersion {
             }
 
             {
+                isFirst = !configuration.generalObjects.containsKey("mainVersion");
+                if (isFirst)
+                    configuration.generalObjects.put("mainVersion", this);
                 gameDir = (File) configuration.generalObjects.get("gameDir");
                 final Object vm = configuration.generalObjects.get("variables");
                 if (vm == null)
