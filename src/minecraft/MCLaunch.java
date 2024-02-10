@@ -41,7 +41,11 @@ public class MCLaunch implements LaunchListener {
             return;
         }
         if (h) {
-            if (line.contains("LWJGL version") || line.contains("[mixin/]: SpongePowered MIXIN Subsystem")) {
+            if (
+                    line.contains("LWJGL version") || line.contains("LWJGL Version") ||
+                    line.contains("[LaunchServiceHandler/MODLAUNCHER]: Launching target 'fmlclient'") ||
+                    line.contains("EARLYDISPLAY")
+            ) {
                 h = false;
                 configuration.setVisible(false);
             }
