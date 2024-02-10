@@ -55,31 +55,28 @@ public class WebVersion implements IMinecraftVersion {
 
             @Override
             public void preLaunch() {
-                configuration.addTaskGroup(new TaskGroupAutoProgress() {{
-                    addTask(new Task() {
-                        @Override
-                        public void run() throws Throwable {
-                            if (!d.exists())
-                                d.mkdirs();
-                            if (!f.exists() || sha1 != null && !Core.hashToHex("sha1", Files.readAllBytes(f.toPath())).equals(sha1))
-                                while (true) {
-                                    final ByteArrayOutputStream os = new ByteArrayOutputStream();
-                                    final WebResponse r = client.open("GET", url, os, true);
-                                    r.auto();
-                                    if (r.getResponseCode() != 200)
-                                        continue;
-                                    final byte[] data = os.toByteArray();
-                                    if (sha1 == null || Core.hashToHex("sha1", data).equals(sha1)) {
-                                        Files.write(f.toPath(), data);
-                                        break;
-                                    }
-                                }
-                            sub.preLaunch();
+                try {
+                    if (!d.exists())
+                        d.mkdirs();
+                    if (!f.exists() || sha1 != null && !Core.hashToHex("sha1", Files.readAllBytes(f.toPath())).equals(sha1))
+                        while (true) {
+                            final ByteArrayOutputStream os = new ByteArrayOutputStream();
+                            final WebResponse r = client.open("GET", url, os, true);
+                            r.auto();
+                            if (r.getResponseCode() != 200)
+                                continue;
+                            final byte[] data = os.toByteArray();
+                            if (sha1 == null || Core.hashToHex("sha1", data).equals(sha1)) {
+                                Files.write(f.toPath(), data);
+                                break;
+                            }
                         }
-
-                        @Override public String toString() { return "Getting client ..."; }
-                    });
-                }});
+                    sub.preLaunch();
+                } catch (final Exception ex) {
+                    ex.printStackTrace();
+                    ex.fillInStackTrace();
+                    ex.printStackTrace();
+                }
             }
 
             @Override public void launch() { sub.launch(); }
