@@ -432,6 +432,48 @@ public class MCMetaVersion implements IMinecraftVersion {
 
                 vars.put("classpath", classpath.toString());
 
+                if (dict.has("logging") && !configuration.generalObjects.containsKey("logging"))
+                    try {
+                        final JsonDict d1 = dict.getAsDict("logging");
+                        if (d1.has("client")) {
+                            final JsonDict c = d1.getAsDict("client"), file = c.getAsDict("file");
+                            final File f = new File(gameDir, file.getAsString("id"));
+                            final String sha1 = file.getAsString("sha1");
+                            g.addTask(new Task() {
+                                final sURL url = new sURL(file.getAsString("url"));
+
+                                @Override
+                                public void run() throws Throwable {
+                                    if (!f.exists() || (plugin.checkHashFS.get() && sha1 != null && !Core.hashToHex("sha1", Files.readAllBytes(f.toPath())).equals(sha1))) {
+                                        m1:
+                                        while (true) {
+                                            final ByteArrayOutputStream os = new ByteArrayOutputStream();
+                                            final WebResponse r = client.open("GET", url, os, true);
+                                            r.auto();
+                                            switch (r.getResponseCode()) {
+                                                case 404:
+                                                    break m1;
+                                                case 200:
+                                                    break;
+                                                default:
+                                                    continue;
+                                            }
+                                            final byte[] data = os.toByteArray();
+                                            if (sha1 == null || Core.hashToHex("sha1", data).equals(sha1)) {
+                                                Files.write(f.toPath(), data);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                            configuration.generalObjects.put("logging", c.getAsString("argument").replaceAll("\\$\\{path}", Matcher.quoteReplacement(f.getAbsolutePath())));
+                            System.out.println("[MinecraftSupport] Applied logging configuration: " + file.getAsString("id"));
+                        }
+                    } catch (final Exception ex) {
+                        ex.printStackTrace();
+                    }
+
                 if (parent != null)
                     try {
                         parent.preLaunch();
@@ -570,6 +612,8 @@ public class MCMetaVersion implements IMinecraftVersion {
                                     if (a != null && !a.isEmpty())
                                         configuration.beginArgs.add(patch(a));
                             }
+                            if (configuration.generalObjects.containsKey("logging"))
+                                configuration.beginArgs.add((String) configuration.generalObjects.remove("logging"));
                             parse(args.getAsList("jvm"), configuration.beginArgs);
                         }
                     } catch (final Exception ex) {
@@ -585,6 +629,8 @@ public class MCMetaVersion implements IMinecraftVersion {
                         for (final String a : gl)
                             if (a != null && !a.isEmpty())
                                 l.add(patch(a));
+                    if (configuration.generalObjects.containsKey("logging"))
+                        configuration.beginArgs.add((String) configuration.generalObjects.remove("logging"));
                     l.add("-Djava.library.path=" + vars.get("natives_directory"));
                     l.add("-cp");
                     l.add(vars.get("classpath") + configuration.generalObjects.get("clientJar"));
