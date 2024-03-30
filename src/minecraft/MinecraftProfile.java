@@ -14,6 +14,7 @@ import Utils.json.JsonDict;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -24,11 +25,7 @@ public class MinecraftProfile implements IMinecraftProfile {
     public final MinecraftSupport plugin;
     private final ConcurrentLinkedQueue<Java> javaList;
 
-    public MinecraftProfile(final PluginContext context) {
-        this.context = context;
-        plugin = (MinecraftSupport) context.getPlugin();
-        javaList = ((JavaSupport) MinecraftProfile.this.context.getPlugin(JavaSupport.ID)).javaList;
-    }
+    private final ConcurrentHashMap<String, String> env = new ConcurrentHashMap<>();
 
     public JsonDict data = null;
 
@@ -36,6 +33,12 @@ public class MinecraftProfile implements IMinecraftProfile {
     public Java java = null;
 
     public File homeDir = null;
+
+    public MinecraftProfile(final PluginContext context) {
+        this.context = context;
+        plugin = (MinecraftSupport) context.getPlugin();
+        javaList = ((JavaSupport) MinecraftProfile.this.context.getPlugin(JavaSupport.ID)).javaList;
+    }
 
     /**
      * @since MinecraftSupport 0.2.5
@@ -53,6 +56,7 @@ public class MinecraftProfile implements IMinecraftProfile {
 
     @Override
     public void open(final IEditorContext context) {
+        //context.getContainer().borderRadius(UI.ZERO).background(UI.TRANSPARENT);
         final int cw = context.width() - 16, cw2 = (cw - 8) / 2;
         final AtomicBoolean skip = new AtomicBoolean(false);
         final ITextField nf, jaf, gaf;
